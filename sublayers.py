@@ -1,12 +1,56 @@
 import torch
-import copy
+import torch.nn.functional as F
 import numpy as np
+from config import FLAGS
+from matplotlib import pyplot as plt
 
-_D_MODEL = 512
-_D_K = 64
-_ATT_HEADS = 8
-_DFF = 2048
-_VOCAB = 30000
+params = FLAGS.flag_values_dict()
+
+_D_MODEL = params["d_model"]
+_D_K = params["d_k"]
+_ATT_HEADS = params["h"]
+_DFF = params["dff"]
+_VOCAB = params["vocab_size"]
+_MAX_LEN = params["max_len"]
+
+class PositionalEncoding(torch.nn.Module):
+    """
+    code obtained from http://nlp.seas.harvard.edu/2018/04/03/attention.html#attention
+    """
+    def __init__(self):
+        super(PositionalEncoding, self).__init__()
+        self.d_model = _D_MODEL
+        self.max_len = _MAX_LEN
+
+        # positional encoding for each place in an input sentence
+        self.pos_enc = np.zeros((self.max_len, self.d_model))
+        self.position = np.arange(0, self.max_len).reshape(-1, 1)
+
+        # has shape (self.d_model / 2)
+        div_term = np.power(10000, -np.arange(0, self.d_model, 2) / self.d_model)
+
+        # for all even dimensions, division is done elementwise, by broadcasting
+        self.pos_enc[:, 0::2] = np.sin(self.position * div_term)
+        self.pos_enc[:, 1::2] = np.cos(self.position * div_term)
+
+        # positional encoding is not a model parameter
+        self.register_buffer('pe', torch.Tensor(self.pos_enc))
+
+    def forward(self, x):
+        """
+
+        :param x: input sequence of embeddings of shape (batch_size, seq_len, d_model)
+        :return:
+        """
+        len = x.shape[1]
+        batch_size = x.shape[0]
+        t = self.pe[0:len, :]
+        return x + t
+
+    def visualize(self):
+        # visualize the encoding
+        plt.matshow(self.pos_enc)
+        plt.show()
 
 class FFNN(torch.nn.Module):
 
@@ -18,7 +62,7 @@ class FFNN(torch.nn.Module):
         self.W2 = torch.nn.Linear(in_features=self.dff, out_features=self.d_model)
 
     def forward(self, x):
-        return self.W2(torch.nn.relu(self.W1(x)))
+        return self.W2(F.relu(self.W1(x)))
 
 class SelfAttention(torch.nn.Module):
 
@@ -72,9 +116,25 @@ class SelfAttention(torch.nn.Module):
         print(attention.shape)
         return attention
 
-# test self-attention
+
 if __name__ == "__main__":
 
+    # test self-attention
     att = SelfAttention()
-    x = torch.randn(20, 14, 512)
-    att(x, x, x)
+    x = torch.zeros(20, 5000, 512, dtype=torch.float32)
+    #att(x, x, x)
+
+    # test pos_encoding
+    # enc = PositionalEncoding()
+    # x_t = enc(x)
+    # print(x_t.shape)
+    #
+    # plt.matshow(x_t.numpy()[0, :, :])
+    # plt.show()
+
+    # test FFNN
+    nn = FFNN()
+    out = nn(x)
+
+    print(out.shape)
+
