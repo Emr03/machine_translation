@@ -20,8 +20,6 @@ class Transformer(torch.nn.Module):
         self.encoder = StackedEncoder(n_layers=self.n_layers)
         self.decoder = StackedDecoder(n_layers=self.n_layers)
 
-        self.linear = torch.nn.Linear(self.d_model, self.vocab_size)
-
     def encode(self, input_seq):
 
         return self.encoder(input_seq)
@@ -32,8 +30,8 @@ class Transformer(torch.nn.Module):
 
     def forward(self, input_seq):
 
-        prev_output = self.dictionary[""]
         latent = self.encode(input_seq)
+
 
 
 

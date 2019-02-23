@@ -3,7 +3,7 @@
 from absl import flags
 
 flags.DEFINE_integer(
-    "voca_size", default=30000, help="size of vocabulary")
+    "vocab_size", default=30000, help="size of vocabulary")
 
 flags.DEFINE_integer(
     "d_model", default=512, help="dim of word embeddings"

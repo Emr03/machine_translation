@@ -66,13 +66,12 @@ class FFNN(torch.nn.Module):
 
 class SelfAttention(torch.nn.Module):
 
-    def __init__(self, mask=None):
+    def __init__(self):
 
         super(SelfAttention, self).__init__()
         self.d_model = _D_MODEL
         self.d_k = _D_K
         self.heads = _ATT_HEADS
-        self.mask = mask
 
         # compute queries, keys and values for all attention heads in parallel
         self.W_q = torch.rand(self.d_model, self.d_model)
@@ -80,7 +79,7 @@ class SelfAttention(torch.nn.Module):
         self.W_v = torch.rand(self.d_model, self.d_model)
         self.W_o = torch.rand(self.d_model, self.d_model)
 
-    def forward(self, x_q, x_k, x_v):
+    def forward(self, x_q, x_k, x_v, mask=None):
         """
         shapes = (batch_size, sentence_len, d_model)
         :param x_q: input used to form query
@@ -88,7 +87,7 @@ class SelfAttention(torch.nn.Module):
         :param x_v: input used to form value
         :return:
         """
-        batch_size = x.shape[0]
+        batch_size = x_q.shape[0]
         # output of matmul has shape batch_size, sentence_len, d_model
         # split d_model into heads and d_k, then transpose to do the attention operations
         # final shape = batch_size, heads, sentence_len, d_k
@@ -100,10 +99,11 @@ class SelfAttention(torch.nn.Module):
         # note that matmul does batch-wize matrix multiplication, ignoring the first two dimensions
         # scores has shape batch_size, heads, sentence_len, sentence_len
         scores = torch.matmul(Q, K.transpose(2, -1)) / np.sqrt(self.d_k)
-        if self.mask is not None:
+        if mask is not None:
             # set to -inf, where mask value is 0
-            scores = scores.masked_fill(self.mask == 0, -1e9)
+            scores = scores.masked_fill(mask == 0, -1e9)
 
+        print("scores", scores[0, 0, :, :])
         scores = torch.nn.functional.softmax(scores, dim=2)
 
         # matmul has shape = batch_size, heads, sentence_len, d_k
@@ -121,8 +121,14 @@ if __name__ == "__main__":
 
     # test self-attention
     att = SelfAttention()
-    x = torch.zeros(20, 5000, 512, dtype=torch.float32)
-    #att(x, x, x)
+    x = torch.ones(3, 5, 512, dtype=torch.float32)
+    att(x, x, x)
+
+    # test self-attention with masking
+    mask = torch.zeros(1, 5)
+    mask[:, 0:2] = 1
+    out = att(x, x, x, mask=mask)
+    print(out)
 
     # test pos_encoding
     # enc = PositionalEncoding()
