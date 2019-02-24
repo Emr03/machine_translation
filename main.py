@@ -29,15 +29,16 @@ def get_parser():
                         help="Maximum length of sentences (after BPE)")
     parser.add_argument("--max_vocab", type=int, default=-1,
                         help="Maximum vocabulary size (-1 to disable)")
-    # training steps
-
+    # training parameters
+    parser.add_argument("--batch_size", type=int, default=32,
+                        help="Batch size")
     return parser
 
 
 
 def main(params):
-    data = {'dico': {}, 'mono': {}, 'para': {}, 'back': {}}
-    load_mono_data(params, data)
+    check_all_data_params(params)
+    load_data(params)
 
 if __name__ == '__main__':
     parser = get_parser()
