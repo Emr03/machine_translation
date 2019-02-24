@@ -528,5 +528,4 @@ def load_data(params, mono_only=False):
             logger.info("Vocabulary - {: >4}):{: >7} words".format(lang, len(data['vocab'][lang])))
 
     logger.info('')
-    print(data)
     return data
