@@ -25,4 +25,7 @@ flags.DEFINE_integer(
     "max_len", default=5000, help="max sentence length"
 )
 
+flags.DEFINE_integer(
+    "n_layers", default=6, help="number of decoder and encoder layers in the stack"
+)
 FLAGS = flags.FLAGS
