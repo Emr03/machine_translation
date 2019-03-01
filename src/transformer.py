@@ -5,6 +5,7 @@ from .decoder import *
 import numpy as np
 from .data.loader import *
 from .data_loading import get_parser
+from .data.dataset import *
 
 class Transformer(torch.nn.Module):
 
@@ -42,12 +43,36 @@ class Transformer(torch.nn.Module):
         all_data = load_data(data_params)
         print(all_data)
         self.languages = list(all_data['dico'].keys())
-        self.mono_data_lang1_train = all_data['mono'][self.languages[0]]['train']
-        self.mono_data_lang2_train = all_data['mono'][self.languages[1]]['train']
-        self.mono_data_lang1_valid = all_data['mono'][self.languages[0]]['valid']
-	self.mono_data_lang2_valid = all_data['mono'][self.languages[1]]['valid']
+
+        self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
+                                all_data['mono'][self.languages[1]]['train']]
+
+        self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
+                                all_data['mono'][self.languages[1]]['valid']]
+
         self.dictionary_lang1 = all_data['dico'][self.languages[0]]
         self.dictionary_lang2 = all_data['dico'][self.languages[1]]
+
+        self.lang1_train_iterator = self.mono_data_lang1_train.get_iterator(shuffle=True,
+                                                                            group_by_size=True)
+
+        self.lang2_train_iterator = self.mono_data_lang2_train.get_iterator(shuffle=True,
+                                                                            group_by_size=True)
+
+    def reconstruction_loss(self):
+
+    def train_iter(self, src_batch, tgt_batch):
+
+        self.forward(src_batch)
+
+    def train_loop(self, train_iter):
+
+        for i in range(train_iter):
+
+            src_lan = i % 2
+            tgt_lan = (i + 1) % 2
+
+
 
 if __name__ == "__main__":
 
