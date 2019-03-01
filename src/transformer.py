@@ -59,7 +59,17 @@ class Transformer(torch.nn.Module):
         self.lang2_train_iterator = self.mono_data_lang2_train.get_iterator(shuffle=True,
                                                                             group_by_size=True)
 
-    def reconstruction_loss(self):
+    def reconstruction_loss(self, orig, output):
+        # TODO
+
+    def enc_loss(self, orig, output):
+        # TODO
+
+    def generate_pairs(self):
+        # TODO
+
+    def beam_search(self):
+        # TODO
 
     def train_iter(self, src_batch, tgt_batch):
 

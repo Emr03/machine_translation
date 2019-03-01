@@ -9,3 +9,5 @@ class Noise(torch.nn.Module):
         self.word_drop = word_drop
         self.permute_window = permute_window
 
+    def forward(self, input):
+        # TODO
