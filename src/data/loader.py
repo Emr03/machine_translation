@@ -281,9 +281,9 @@ def load_mono_data(params, data):
             # load data
             mono_data = load_binarized(path, params)
             set_parameters(params, mono_data['dico'])
-            print(mono_data['sentences'])
-            print(data['dico'][lang].word2id)
-            print(data['dico'][lang].id2word)
+            # print(mono_data['sentences'])
+            # print(data['dico'][lang].word2id)
+            # print(data['dico'][lang].id2word)
 
             # set / check dictionary
             if lang not in data['dico']:
