@@ -10,11 +10,6 @@ import torch
 
 from .data.dictionary import EOS_WORD, UNK_WORD
 
-
-
-
-
-
 def create_word_masks(params, data):
     """
     Create masks for allowed / forbidden output words.

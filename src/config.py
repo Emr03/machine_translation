@@ -28,4 +28,9 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
     "n_layers", default=6, help="number of decoder and encoder layers in the stack"
 )
+
+flags.DEFINE_float(
+    "dropout", default=0.1, help="dropout parameter"
+)
+
 FLAGS = flags.FLAGS

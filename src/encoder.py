@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from sublayers import *
+from src.sublayers import *
 
 _D_MODEL = params["d_model"]
 _D_K = params["d_k"]
@@ -8,6 +8,7 @@ _ATT_HEADS = params["h"]
 _DFF = params["dff"]
 _VOCAB = params["vocab_size"]
 _MAX_LEN = params["max_len"]
+_DROPOUT = params["dropout"]
 
 class EncoderLayer(torch.nn.Module):
 
@@ -19,6 +20,7 @@ class EncoderLayer(torch.nn.Module):
         self.ffnn = FFNN()
         self.layer_norm_1 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.layer_norm_2 = torch.nn.LayerNorm(normalized_shape=self.d_model)
+        self.dropout = torch.nn.Dropout(_DROPOUT)
 
     def forward(self, x):
         """
@@ -27,7 +29,9 @@ class EncoderLayer(torch.nn.Module):
         :return:
         """
         x = self.layer_norm_1(self.attn(x, x, x) + x)
+        x = self.dropout(x)
         x = self.layer_norm_2(self.ffnn(x) + x)
+        x = self.dropout(x)
 
         return x
 

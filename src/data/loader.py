@@ -27,15 +27,18 @@ def load_binarized(path, params):
     if path in loaded_data:
         logger.info("Reloading data loaded from %s ..." % path)
         return loaded_data[path]
+
     assert os.path.isfile(path), path
     logger.info("Loading data from %s ..." % path)
     data = torch.load(path)
     data['positions'] = data['positions'].numpy()
+
     logger.info("%i words (%i unique) in %i sentences. %i unknown words (%i unique)." % (
         len(data['sentences']) - len(data['positions']),
         len(data['dico']), len(data['positions']),
         sum(data['unk_words'].values()), len(data['unk_words'])
     ))
+
     if params.max_vocab != -1:
         assert params.max_vocab > 0
         logger.info("Selecting %i most frequent words ..." % params.max_vocab)
@@ -45,6 +48,7 @@ def load_binarized(path, params):
         logger.info("Now %i unknown words covering %.2f%% of the data." % (
             unk_count, 100. * unk_count / (len(data['sentences']) - len(data['positions']))
         ))
+
     loaded_data[path] = data
     return data
 
@@ -92,7 +96,6 @@ def load_vocab(params, data):
                     % (len(data['vocab'][lang]), lang))
 
     logger.info('')
-
 
 def set_parameters(params, dico):
     """
@@ -261,6 +264,7 @@ def load_mono_data(params, data):
     if len(params.mono_dataset) == 0:
         return
     print(params.mono_dataset)
+
     for lang, paths in params.mono_dataset.items():
 
         assert lang in params.langs

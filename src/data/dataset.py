@@ -19,6 +19,8 @@ class Dataset(object):
         self.pad_index = params.pad_index
         self.unk_index = params.unk_index
         self.bos_index = params.bos_index
+
+        # unused here
         self.batch_size = params.batch_size
 
     def batch_sentences(self, sentences, lang_id):
@@ -28,20 +30,33 @@ class Dataset(object):
         sentence, and a vector lengths containing the length of each sentence.
         """
         assert type(lang_id) is int
+        # add 2 tokens, for bos and eos
         lengths = torch.LongTensor([len(s) + 2 for s in sentences])
+
+        # fill unused sentence spaces with pad token
         sent = torch.LongTensor(lengths.max(), lengths.size(0)).fill_(self.pad_index)
 
+        # fill beginning of sentences with language-specific bos token?
         sent[0] = self.bos_index[lang_id]
+
+        # copy sentence tokens, don't overwrite bos, add eos
         for i, s in enumerate(sentences):
             sent[1:lengths[i] - 1, i].copy_(s)
             sent[lengths[i] - 1, i] = self.eos_index
 
         return sent, lengths
 
-
 class MonolingualDataset(Dataset):
 
     def __init__(self, sent, pos, dico, lang_id, params):
+        """
+
+        :param sent: list of sentences
+        :param pos: list of shape (n_sentences, 2), holds [index of beginning of sentence in sentences, index of end of sentence]
+        :param dico: Dictionary
+        :param lang_id:
+        :param params: contains things like special tokens
+        """
         super(MonolingualDataset, self).__init__(params)
         assert type(lang_id) is int
         self.sent = sent
@@ -92,6 +107,7 @@ class MonolingualDataset(Dataset):
     def select_data(self, a, b):
         """
         Only retain a subset of the dataset.
+        Does change self.sent
         """
         assert 0 <= a <= b <= len(self.pos)
         if a < b:
@@ -103,6 +119,7 @@ class MonolingualDataset(Dataset):
 
     def get_batches_iterator(self, batches):
         """
+        batches is a list of lists of sentence indices
         Return a sentences iterator, given the associated sentence batches.
         """
         def iterator():
@@ -128,10 +145,12 @@ class MonolingualDataset(Dataset):
 
         # group sentences by lengths
         if group_by_size:
+            # new list of indices, sorted by length
             indices = indices[np.argsort(self.lengths[indices], kind='mergesort')]
 
         # create batches / optionally shuffle them
         batches = np.array_split(indices, math.ceil(len(indices) * 1. / self.batch_size))
+
         if shuffle:
             np.random.shuffle(batches)
 

@@ -8,6 +8,7 @@ _ATT_HEADS = params["h"]
 _DFF = params["dff"]
 _VOCAB = params["vocab_size"]
 _MAX_LEN = params["max_len"]
+_DROPOUT = params["dropout"]
 
 class DecoderLayer(torch.nn.Module):
 
@@ -21,6 +22,7 @@ class DecoderLayer(torch.nn.Module):
         self.layer_norm_1 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.layer_norm_2 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.layer_norm_3 = torch.nn.LayerNorm(normalized_shape=self.d_model)
+        self.dropout = torch.nn.Dropout(_DROPOUT)
 
     def forward(self, dec_outputs, enc_outputs, mask):
 
@@ -28,12 +30,15 @@ class DecoderLayer(torch.nn.Module):
                                                  x_k=dec_outputs,
                                                  x_v=dec_outputs,
                                                  mask=mask) + dec_outputs)
-
+        out = self.dropout(out)
         out = self.layer_norm_2(self.attn(x_q=out,
                                           x_k = enc_outputs,
                                           x_v = enc_outputs) + out)
 
+        out = self.dropout(out)
         out = self.layer_norm_3(self.ffnn(out) + out)
+        out = self.dropout(out)
+
         return out
 
 

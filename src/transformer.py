@@ -36,6 +36,8 @@ class Transformer(torch.nn.Module):
         dec_outputs = self.decode(prev_output=prev_output, latent_seq=latent, mask=mask)
         return F.softmax(self.linear(dec_outputs), dim=-1)
 
+    def load_data(self, data_path):
+
 if __name__ == "__main__":
 
     # test transformer

@@ -87,6 +87,8 @@ class Dictionary(object):
         Limit the vocabulary size.
         """
         assert max_vocab >= 1
+
+        # are words sorted by frequency?
         self.id2word = {k: v for k, v in self.id2word.items() if k < max_vocab}
         self.word2id = {v: k for k, v in self.id2word.items()}
         self.check_valid()
@@ -99,9 +101,12 @@ class Dictionary(object):
         skipped = 0
         assert os.path.isfile(vocab_path), vocab_path
         word2id = {BOS_WORD: 0, EOS_WORD: 1, PAD_WORD: 2, UNK_WORD: 3}
+
         for i in range(SPECIAL_WORDS):
             word2id[SPECIAL_WORD % i] = 4 + i
+
         f = open(vocab_path, 'r', encoding='utf-8')
+        # are words sorted by frequency in the dictionary file?
         for i, line in enumerate(f):
             if '\u2028' in line:
                 skipped += 1
@@ -111,7 +116,10 @@ class Dictionary(object):
             assert line[0] not in word2id and line[1].isdigit(), (i, line)
             word2id[line[0]] = 4 + SPECIAL_WORDS + i - skipped  # shift because of extra words
         f.close()
+
         id2word = {v: k for k, v in word2id.items()}
+
+        # Dictionary object created using 2 python dictionaries
         dico = Dictionary(id2word, word2id)
         logger.info("Read %i words from the vocabulary file." % len(dico))
         if skipped > 0:
@@ -121,8 +129,16 @@ class Dictionary(object):
     @staticmethod
     def index_data(path, bin_path, dico):
         """
+
+        :param path: path to file containing sentences
+        :param bin_path: path to file containing indexed sentences
+        :param dico: dictionary to index sentences with
+        :return:
+        """
+        """
         Index sentences with a dictionary.
         """
+        # if bin path already exists, check that sentences were indexed with specified dictionary
         if os.path.isfile(bin_path):
             print("Loading data from %s ..." % bin_path)
             data = torch.load(bin_path)
@@ -139,26 +155,39 @@ class Dictionary(object):
             if i % 1000000 == 0 and i > 0:
                 print(i)
             s = line.rstrip().split()
+
             # skip empty sentences
             if len(s) == 0:
                 print("Empty sentence in line %i." % i)
                 # continue
+
             # index sentence words
             count_unk = 0
             indexed = []
             for w in s:
+                # get index of the word according to word2id
                 word_id = dico.index(w, no_unk=False)
+
+                # if word_id belongs to bos, eos, pad or special words
                 if word_id < 4 + SPECIAL_WORDS and word_id != dico.unk_index:
                     logger.warning('Found unexpected special word "%s" (%i)!!' % (w, word_id))
                     continue
+
+                # else, add word_id to list of indexed words of the sentence
                 indexed.append(word_id)
                 if word_id == dico.unk_index:
                     unk_words[w] = unk_words.get(w, 0) + 1
                     count_unk += 1
-            # add sentence
+
+            # positions holds [index of beginning of sentence in sentences, index of end of sentence]
             positions.append([len(sentences), len(sentences) + len(indexed)])
+
+            # word id's from all sentences are just appended to one list
             sentences.extend(indexed)
+
+            # but separated by -1
             sentences.append(-1)
+
         f.close()
 
         # tensorize data
