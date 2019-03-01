@@ -1,26 +1,16 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-from config import FLAGS
 from matplotlib import pyplot as plt
-
-params = FLAGS.flag_values_dict()
-
-_D_MODEL = params["d_model"]
-_D_K = params["d_k"]
-_ATT_HEADS = params["h"]
-_DFF = params["dff"]
-_VOCAB = params["vocab_size"]
-_MAX_LEN = params["max_len"]
 
 class PositionalEncoding(torch.nn.Module):
     """
     code obtained from http://nlp.seas.harvard.edu/2018/04/03/attention.html#attention
     """
-    def __init__(self):
+    def __init__(self, params):
         super(PositionalEncoding, self).__init__()
-        self.d_model = _D_MODEL
-        self.max_len = _MAX_LEN
+        self.d_model = params["d_model"]
+        self.max_len = params["max_len"]
 
         # positional encoding for each place in an input sentence
         self.pos_enc = np.zeros((self.max_len, self.d_model))
@@ -54,10 +44,10 @@ class PositionalEncoding(torch.nn.Module):
 
 class FFNN(torch.nn.Module):
 
-    def __init__(self):
+    def __init__(self, params):
         super(FFNN, self).__init__()
-        self.d_model = _D_MODEL
-        self.dff = _DFF
+        self.d_model = params["d_model"]
+        self.dff = params["dff"]
         self.W1 = torch.nn.Linear(in_features=self.d_model, out_features=self.dff)
         self.W2 = torch.nn.Linear(in_features=self.dff, out_features=self.d_model)
 
@@ -66,12 +56,12 @@ class FFNN(torch.nn.Module):
 
 class SelfAttention(torch.nn.Module):
 
-    def __init__(self):
+    def __init__(self, params):
 
         super(SelfAttention, self).__init__()
-        self.d_model = _D_MODEL
-        self.d_k = _D_K
-        self.heads = _ATT_HEADS
+        self.d_model = params["d_model"]
+        self.d_k = params["d_k"]
+        self.heads = params["h"]
 
         # compute queries, keys and values for all attention heads in parallel
         self.W_q = torch.rand(self.d_model, self.d_model)
@@ -119,8 +109,9 @@ class SelfAttention(torch.nn.Module):
 
 if __name__ == "__main__":
 
+    from src.config import params
     # test self-attention
-    att = SelfAttention()
+    att = SelfAttention(params)
     x = torch.ones(3, 5, 512, dtype=torch.float32)
     att(x, x, x)
 
@@ -139,7 +130,7 @@ if __name__ == "__main__":
     # plt.show()
 
     # test FFNN
-    nn = FFNN()
+    nn = FFNN(params)
     out = nn(x)
 
     print(out.shape)

@@ -2,27 +2,19 @@ import torch
 import numpy as np
 from src.sublayers import *
 
-_D_MODEL = params["d_model"]
-_D_K = params["d_k"]
-_ATT_HEADS = params["h"]
-_DFF = params["dff"]
-_VOCAB = params["vocab_size"]
-_MAX_LEN = params["max_len"]
-_DROPOUT = params["dropout"]
-
 class DecoderLayer(torch.nn.Module):
 
-    def __init__(self):
+    def __init__(self, params):
 
         super(DecoderLayer, self).__init__()
-        self.d_model = _D_MODEL
-        self.masked_attn = SelfAttention()
-        self.attn = SelfAttention()
-        self.ffnn = FFNN()
+        self.d_model = params["d_model"]
+        self.masked_attn = SelfAttention(params)
+        self.attn = SelfAttention(params)
+        self.ffnn = FFNN(params)
         self.layer_norm_1 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.layer_norm_2 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.layer_norm_3 = torch.nn.LayerNorm(normalized_shape=self.d_model)
-        self.dropout = torch.nn.Dropout(_DROPOUT)
+        self.dropout = torch.nn.Dropout(params["dropout"])
 
     def forward(self, dec_outputs, enc_outputs, mask):
 
@@ -44,16 +36,16 @@ class DecoderLayer(torch.nn.Module):
 
 class StackedDecoder(torch.nn.Module):
 
-    def __init__(self, n_layers):
+    def __init__(self, n_layers, params):
 
         super(StackedDecoder, self).__init__()
-        self.d_model = _D_MODEL
-        self.vocab_size = _VOCAB
-        self.pos_enc = PositionalEncoding()
+        self.d_model = params["d_model"]
+        self.vocab_size = params["vocab_size"]
+        self.pos_enc = PositionalEncoding(params)
         self.embedding_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
         # TODO: initialize embedding layer with cross-lingual embeddings
 
-        self.decoder_layers = [DecoderLayer() for _ in range(n_layers)]
+        self.decoder_layers = [DecoderLayer(params) for _ in range(n_layers)]
 
     def forward(self, dec_outputs, enc_outputs, mask):
         """
@@ -71,16 +63,16 @@ class StackedDecoder(torch.nn.Module):
         return dec_outputs
 
 if __name__ == "__main__":
-
+    from src.config import params
     # test decoder layer
     x = torch.zeros(20, 5, 512, dtype=torch.float32)
     m = torch.zeros(1, 5)
     m[:, 0] = 1
-    dec_layer = DecoderLayer()
+    dec_layer = DecoderLayer(params)
     out = dec_layer(dec_outputs=x, enc_outputs=x, mask=m)
     print(out.shape)
 
     # test decoder stack
-    dec = StackedDecoder(n_layers=6)
+    dec = StackedDecoder(n_layers=6, params=params)
     out = dec(x, x, m)
     print(out.shape)

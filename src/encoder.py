@@ -2,25 +2,17 @@ import torch
 import numpy as np
 from src.sublayers import *
 
-_D_MODEL = params["d_model"]
-_D_K = params["d_k"]
-_ATT_HEADS = params["h"]
-_DFF = params["dff"]
-_VOCAB = params["vocab_size"]
-_MAX_LEN = params["max_len"]
-_DROPOUT = params["dropout"]
-
 class EncoderLayer(torch.nn.Module):
 
-    def __init__(self):
+    def __init__(self, params):
 
         super(EncoderLayer, self).__init__()
-        self.d_model = _D_MODEL
-        self.attn = SelfAttention()
-        self.ffnn = FFNN()
+        self.d_model = params["d_model"]
+        self.attn = SelfAttention(params)
+        self.ffnn = FFNN(params)
         self.layer_norm_1 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.layer_norm_2 = torch.nn.LayerNorm(normalized_shape=self.d_model)
-        self.dropout = torch.nn.Dropout(_DROPOUT)
+        self.dropout = torch.nn.Dropout(params["dropout"])
 
     def forward(self, x):
         """
@@ -37,16 +29,16 @@ class EncoderLayer(torch.nn.Module):
 
 class StackedEncoder(torch.nn.Module):
 
-    def __init__(self, n_layers):
+    def __init__(self, n_layers, params):
 
         super(StackedEncoder, self).__init__()
-        self.vocab_size = _VOCAB
-        self.d_model = _D_MODEL
+        self.vocab_size =  params["vocab_size"]
+        self.d_model =  params["d_model"]
         self.embedding_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
-        self.pos_enc = PositionalEncoding()
+        self.pos_enc = PositionalEncoding(params)
 
         # TODO: initialize embedding layer with cross-lingual embeddings
-        self.encoder = torch.nn.Sequential(*[EncoderLayer() for _ in range(n_layers)])
+        self.encoder = torch.nn.Sequential(*[EncoderLayer(params) for _ in range(n_layers)])
 
     def forward(self, input_seq):
         x = self.pos_enc(input_seq)
@@ -55,15 +47,16 @@ class StackedEncoder(torch.nn.Module):
 
 if __name__ == "__main__":
 
+    from src.config import params
     # test encoder layer
     x = torch.zeros(20, 5, 512, dtype=torch.float32)
 
-    enc_layer = EncoderLayer()
+    enc_layer = EncoderLayer(params)
     out = enc_layer(x)
     print(out.shape)
 
     # test encoder stack
-    enc = StackedEncoder(n_layers=6)
+    enc = StackedEncoder(n_layers=6, params=params)
     out = enc(x)
     print(out.shape)
 

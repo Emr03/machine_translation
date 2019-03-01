@@ -34,3 +34,4 @@ flags.DEFINE_float(
 )
 
 FLAGS = flags.FLAGS
+params = FLAGS.flag_values_dict()

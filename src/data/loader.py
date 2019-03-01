@@ -9,7 +9,7 @@ import os
 from logging import getLogger
 import torch
 
-from ..utils import create_word_masks
+from .utils import create_word_masks
 from .dataset import MonolingualDataset, ParallelDataset
 from .dictionary import EOS_WORD, PAD_WORD, UNK_WORD, SPECIAL_WORD, SPECIAL_WORDS
 

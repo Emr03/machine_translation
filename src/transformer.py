@@ -1,13 +1,10 @@
-import torch
-import torch.nn.functional as F
+from src.config import params
+
 from src.encoder import *
 from src.decoder import *
-from src.config import FLAGS
 import numpy as np
 from src.data.loader import *
 from data_loading import get_parser
-
-params = FLAGS.flag_values_dict()
 
 class Transformer(torch.nn.Module):
 
@@ -20,8 +17,8 @@ class Transformer(torch.nn.Module):
         self.dff = params["dff"]
         self.d_k = params["d_k"]
 
-        self.encoder = StackedEncoder(n_layers=self.n_layers)
-        self.decoder = StackedDecoder(n_layers=self.n_layers)
+        self.encoder = StackedEncoder(n_layers=self.n_layers, params=params)
+        self.decoder = StackedDecoder(n_layers=self.n_layers, params=params)
         self.linear = torch.nn.Linear(self.d_model, self.vocab_size)
 
         self.data = None
