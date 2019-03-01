@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from sublayers import *
+from src.sublayers import *
 
 _D_MODEL = params["d_model"]
 _D_K = params["d_k"]

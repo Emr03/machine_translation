@@ -1,8 +1,8 @@
 import torch
 import torch.nn.functional as F
-from encoder import *
-from decoder import *
-from config import FLAGS
+from src.encoder import *
+from src.decoder import *
+from src.config import FLAGS
 import numpy as np
 
 params = FLAGS.flag_values_dict()

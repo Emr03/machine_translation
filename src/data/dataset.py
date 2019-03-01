@@ -10,9 +10,7 @@ import math
 import numpy as np
 import torch
 
-
 logger = getLogger()
-
 
 class Dataset(object):
 
@@ -139,7 +137,6 @@ class MonolingualDataset(Dataset):
 
         # return the iterator
         return self.get_batches_iterator(batches)
-
 
 class ParallelDataset(Dataset):
 
