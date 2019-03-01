@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from src.sublayers import *
+from .sublayers import *
 
 class EncoderLayer(torch.nn.Module):
 

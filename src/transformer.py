@@ -1,10 +1,10 @@
-from src.config import params
+from .config import params
 
-from src.encoder import *
-from src.decoder import *
+from .encoder import *
+from .decoder import *
 import numpy as np
-from src.data.loader import *
-from data_loading import get_parser
+from .data.loader import *
+from .data_loading import get_parser
 
 class Transformer(torch.nn.Module):
 
@@ -40,9 +40,12 @@ class Transformer(torch.nn.Module):
     def load_data(self, data_params):
 
         all_data = load_data(data_params)
-        self.languages = all_data['dico'].keys()
-        self.mono_data_train = all_data['mono']['train']
-        self.mono_data_valid = all_data['mono']['valid']
+        print(all_data)
+        self.languages = list(all_data['dico'].keys())
+        self.mono_data_lang1_train = all_data['mono'][self.languages[0]]['train']
+        self.mono_data_lang2_train = all_data['mono'][self.languages[1]]['train']
+        self.mono_data_lang1_valid = all_data['mono'][self.languages[0]]['valid']
+	self.mono_data_lang2_valid = all_data['mono'][self.languages[1]]['valid']
         self.dictionary_lang1 = all_data['dico'][self.languages[0]]
         self.dictionary_lang2 = all_data['dico'][self.languages[1]]
 
