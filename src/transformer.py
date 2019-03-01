@@ -4,6 +4,8 @@ from src.encoder import *
 from src.decoder import *
 from src.config import FLAGS
 import numpy as np
+from src.data.loader import *
+from data_loading import get_parser
 
 params = FLAGS.flag_values_dict()
 
@@ -22,6 +24,8 @@ class Transformer(torch.nn.Module):
         self.decoder = StackedDecoder(n_layers=self.n_layers)
         self.linear = torch.nn.Linear(self.d_model, self.vocab_size)
 
+        self.data = None
+
     def encode(self, input_seq):
 
         return self.encoder(input_seq)
@@ -36,7 +40,14 @@ class Transformer(torch.nn.Module):
         dec_outputs = self.decode(prev_output=prev_output, latent_seq=latent, mask=mask)
         return F.softmax(self.linear(dec_outputs), dim=-1)
 
-    def load_data(self, data_path):
+    def load_data(self, data_params):
+
+        all_data = load_data(data_params)
+        self.languages = all_data['dico'].keys()
+        self.mono_data_train = all_data['mono']['train']
+        self.mono_data_valid = all_data['mono']['valid']
+        self.dictionary_lang1 = all_data['dico'][self.languages[0]]
+        self.dictionary_lang2 = all_data['dico'][self.languages[1]]
 
 if __name__ == "__main__":
 
@@ -50,6 +61,13 @@ if __name__ == "__main__":
     model = Transformer()
     out = model(input_seq=x, prev_output=y, mask=m)
     print(out.shape)
+
+    parser=get_parser()
+    data_params = parser.parse_args()
+    check_all_data_params(data_params)
+    model.load_data(data_params=data_params)
+
+
 
 
 
