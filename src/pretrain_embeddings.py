@@ -21,7 +21,7 @@ def reload_pth_emb(path, dim):
     Reload pretrained embeddings from a PyTorch binary file.
     """
     from .data import dictionary
-    sys.modules['src.dictionary'] = dictionary
+    sys.modules['src.data.dictionary'] = dictionary
     logger.info("Reloading embeddings from %s ..." % path)
     data = torch.load(path)
     vectors = data['vectors']
@@ -145,3 +145,10 @@ def initialize_embeddings(encoder, decoder, params, data):
             "Initialized %i / %i word embeddings for \"%s\" (including %i "
             "after lowercasing)." % (_found, params.n_words[i], lang, _lower)
         )
+
+if __name__ == "__main__":
+
+    # test loading embeddings from txt file
+    vectors, word2id = reload_embeddings(path="corpora/data/mono/all.en-fr.60000.vec", dim=512)
+    print(vectors.shape())
+    print(word2id)
