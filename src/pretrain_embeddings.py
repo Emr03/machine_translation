@@ -20,7 +20,7 @@ def reload_pth_emb(path, dim):
     """
     Reload pretrained embeddings from a PyTorch binary file.
     """
-    from ..data import dictionary
+    from .data import dictionary
     sys.modules['src.dictionary'] = dictionary
     logger.info("Reloading embeddings from %s ..." % path)
     data = torch.load(path)

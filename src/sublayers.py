@@ -25,6 +25,7 @@ class PositionalEncoding(torch.nn.Module):
 
         # positional encoding is not a model parameter
         self.register_buffer('pe', torch.Tensor(self.pos_enc))
+        self.dropout = torch.nn.Dropout(params["dropout"])
 
     def forward(self, x):
         """
@@ -35,7 +36,7 @@ class PositionalEncoding(torch.nn.Module):
         len = x.shape[1]
         batch_size = x.shape[0]
         t = self.pe[0:len, :]
-        return x + t
+        return self.dropout(x + t)
 
     def visualize(self):
         # visualize the encoding
@@ -63,11 +64,13 @@ class SelfAttention(torch.nn.Module):
         self.d_k = params["d_k"]
         self.heads = params["h"]
 
-        # compute queries, keys and values for all attention heads in parallel
-        self.W_q = torch.rand(self.d_model, self.d_model)
-        self.W_k = torch.rand(self.d_model, self.d_model)
-        self.W_v = torch.rand(self.d_model, self.d_model)
-        self.W_o = torch.rand(self.d_model, self.d_model)
+        # compute queries, keys and values for all attention h, eads in parallel
+        self.W_q = torch.nn.Linear(self.d_model, self.d_model, bias=False)
+        self.W_k = torch.nn.Linear(self.d_model, self.d_model, bias=False)
+        self.W_v = torch.nn.Linear(self.d_model, self.d_model, bias=False)
+        self.W_o = torch.nn.Linear(self.d_model, self.d_model, bias=False)
+
+        # TODO:add the matrices to the set of model weights
 
     def forward(self, x_q, x_k, x_v, mask=None):
         """
@@ -81,9 +84,9 @@ class SelfAttention(torch.nn.Module):
         # output of matmul has shape batch_size, sentence_len, d_model
         # split d_model into heads and d_k, then transpose to do the attention operations
         # final shape = batch_size, heads, sentence_len, d_k
-        Q = torch.matmul(x_q, self.W_q).view(batch_size, -1, self.heads, self.d_k).transpose(1, 2)
-        K = torch.matmul(x_k, self.W_k).view(batch_size, -1, self.heads, self.d_k).transpose(1, 2)
-        V = torch.matmul(x_v, self.W_v).view(batch_size, -1, self.heads, self.d_k).transpose(1, 2)
+        Q = self.W_q(x_q).view(batch_size, -1, self.heads, self.d_k).transpose(1, 2)
+        K = self.W_k(x_k).view(batch_size, -1, self.heads, self.d_k).transpose(1, 2)
+        V = self.W_v(x_v).view(batch_size, -1, self.heads, self.d_k).transpose(1, 2)
 
         # Q K.T has shape (batch_size, self.heads, len, len), apply softmax row-wise
         # note that matmul does batch-wize matrix multiplication, ignoring the first two dimensions
@@ -102,7 +105,7 @@ class SelfAttention(torch.nn.Module):
         print(attention.shape)
         attention = attention.contiguous().view(batch_size, -1, self.d_model)
         print(attention.shape)
-        attention = torch.matmul(attention, self.W_o)
+        attention = self.W_o(attention)
         print(attention.shape)
         return attention
 
@@ -122,12 +125,12 @@ if __name__ == "__main__":
     print(out)
 
     # test pos_encoding
-    # enc = PositionalEncoding()
-    # x_t = enc(x)
-    # print(x_t.shape)
-    #
-    # plt.matshow(x_t.numpy()[0, :, :])
-    # plt.show()
+    enc = PositionalEncoding(params)
+    x_t = enc(x)
+    print(x_t.shape)
+
+    plt.matshow(x_t.numpy()[0, :, :])
+    plt.show()
 
     # test FFNN
     nn = FFNN(params)

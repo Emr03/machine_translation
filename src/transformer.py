@@ -2,6 +2,7 @@ from .config import params
 
 from .encoder import *
 from .decoder import *
+from .sublayers import *
 import numpy as np
 from .data.loader import *
 from .data_loading import get_parser
@@ -24,6 +25,22 @@ class Transformer(torch.nn.Module):
         self.linear = torch.nn.Linear(self.d_model, self.vocab_size)
 
         self.data = None
+
+        def init_weights(m):
+
+            if type(m) == torch.nn.Linear:
+                torch.nn.init.xavier_uniform(m.weight)
+
+                if m.bias is not None:
+                    torch.nn.init.constant(m.bias, 0)
+
+            elif type(m) == torch.nn.Embedding:
+                # TODO: initialize to pretrained cross-lingual embeddings
+
+
+        self.encoder.apply(init_weights)
+        self.decoder.apply(init_weights)
+        self.linear.apply(init_weights)
 
     def encode(self, input_seq):
 

@@ -33,7 +33,6 @@ class DecoderLayer(torch.nn.Module):
 
         return out
 
-
 class StackedDecoder(torch.nn.Module):
 
     def __init__(self, n_layers, params):
@@ -43,8 +42,6 @@ class StackedDecoder(torch.nn.Module):
         self.vocab_size = params["vocab_size"]
         self.pos_enc = PositionalEncoding(params)
         self.embedding_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
-        # TODO: initialize embedding layer with cross-lingual embeddings
-
         self.decoder_layers = [DecoderLayer(params) for _ in range(n_layers)]
 
     def forward(self, dec_outputs, enc_outputs, mask):

@@ -36,8 +36,6 @@ class StackedEncoder(torch.nn.Module):
         self.d_model =  params["d_model"]
         self.embedding_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
         self.pos_enc = PositionalEncoding(params)
-
-        # TODO: initialize embedding layer with cross-lingual embeddings
         self.encoder = torch.nn.Sequential(*[EncoderLayer(params) for _ in range(n_layers)])
 
     def forward(self, input_seq):
