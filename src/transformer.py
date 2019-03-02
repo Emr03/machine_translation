@@ -6,6 +6,7 @@ import numpy as np
 from .data.loader import *
 from .data_loading import get_parser
 from .data.dataset import *
+from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
 
 class Transformer(torch.nn.Module):
 
@@ -46,30 +47,53 @@ class Transformer(torch.nn.Module):
 
         self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
                                 all_data['mono'][self.languages[1]]['train']]
-
+	
+        print('batch_size', self.mono_data_train[0].batch_size)
         self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
                                 all_data['mono'][self.languages[1]]['valid']]
 
         self.dictionary_lang1 = all_data['dico'][self.languages[0]]
         self.dictionary_lang2 = all_data['dico'][self.languages[1]]
+        self.pad_index = self.dictionary_lang1.index(PAD_WORD)
+        self.eos_index = self.dictionary_lang1.index(EOS_WORD)
+        self.bos_index = self.dictionary_lang1.index(BOS_WORD)
+        print("pad_index", self.pad_index)
+        print("eos_index", self.eos_index)
+        print("bos_index", self.bos_index)
+        
+        # sanity check
+        print("pad_index", self.dictionary_lang2.index(PAD_WORD))
+        print("eos_index", self.dictionary_lang2.index(EOS_WORD))
+        print("bos_index", self.dictionary_lang2.index(BOS_WORD))
 
-        self.lang1_train_iterator = self.mono_data_lang1_train.get_iterator(shuffle=True,
-                                                                            group_by_size=True)
+        self.lang1_train_iterator = self.mono_data_train[0].get_iterator(shuffle=True,
+                                                                            group_by_size=False)
 
-        self.lang2_train_iterator = self.mono_data_lang2_train.get_iterator(shuffle=True,
-                                                                            group_by_size=True)
+        self.lang2_train_iterator = self.mono_data_train[1].get_iterator(shuffle=True,
+                                                                            group_by_size=False)
+	
+        self.train_iterators = [self.lang1_train_iterator(), self.lang2_train_iterator()]
 
     def reconstruction_loss(self, orig, output):
         # TODO
+        pass
 
     def enc_loss(self, orig, output):
         # TODO
+        pass
 
     def generate_pairs(self):
         # TODO
+        pass
 
     def beam_search(self):
         # TODO
+        pass 
+
+    def get_src_mask(self, src_batch):
+        mask = torch.ones_like(src_batch)
+        mask.masked_fill_(src_batch == self.pad_index, 0)
+        return mask
 
     def train_iter(self, src_batch, tgt_batch):
 
@@ -81,9 +105,12 @@ class Transformer(torch.nn.Module):
 
             src_lan = i % 2
             tgt_lan = (i + 1) % 2
-
-
-
+            src_batch = next(self.train_iterators[src_lan])
+            tgt_batch = next(self.train_iterators[tgt_lan])
+            print(src_batch)
+            src_mask = self.get_src_mask(src_batch[0])
+            print(src_mask)
+            
 if __name__ == "__main__":
 
     # test transformer
@@ -94,14 +121,15 @@ if __name__ == "__main__":
     print(m)
 
     model = Transformer()
-    out = model(input_seq=x, prev_output=y, mask=m)
-    print(out.shape)
+    #out = model(input_seq=x, prev_output=y, mask=m)
+    #print(out.shape)
 
     parser=get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     model.load_data(data_params=data_params)
-
+    print('loaded data')
+    model.train_loop(train_iter=1)
 
 
 
