@@ -89,9 +89,15 @@ def initialize_embeddings(encoder, decoder, params, data):
     if len(split) == 1:
         assert os.path.isfile(params.pretrained_emb)
         pretrained_0, word2id_0 = reload_embeddings(params.pretrained_emb, params.emb_dim)
+
+        # replicate shared embeddings for each language
         pretrained = [pretrained_0 for _ in range(params.n_langs)]
+
+        # repliate shared dictionary for each language
         word2id = [word2id_0 for _ in range(params.n_langs)]
+
     else:
+
         assert len(split) == params.n_langs
         assert not params.share_lang_emb
         assert all(os.path.isfile(x) for x in split)
@@ -116,20 +122,37 @@ def initialize_embeddings(encoder, decoder, params, data):
 
         # define dictionary / parameters to update
         dico = data['dico'][lang]
+
+        # update the embedding layer of the encoder, for language i
         to_update = [encoder.embeddings[i].weight.data]
+
+        # embeddings are not shared between the encoder and decoder
         if not params.share_encdec_emb:
             to_update.append(decoder.embeddings[i].weight.data)
+
+        # ??????
         if not params.share_decpro_emb and params.pretrained_out:
             to_update.append(decoder.proj[i].weight.data)
 
         # for every word in that language
         for word_id in range(params.n_words[i]):
             word = dico[word_id]
+
+            # if word is in the dictionary of that language
             if word in word2id[i]:
+
+                # count the number of words found for each language
                 found[i] += 1
+
+                # get the embedding vector for that word
                 vec = torch.from_numpy(pretrained[i][word2id[i][word]]).cuda()
+
+                # for each embedding layer to update
+                # set the word_id's word vector to vec
                 for x in to_update:
                     x[word_id] = vec
+
+            # if word requires lowercasing
             elif word.lower() in word2id[i]:
                 found[i] += 1
                 lower[i] += 1
@@ -149,6 +172,6 @@ def initialize_embeddings(encoder, decoder, params, data):
 if __name__ == "__main__":
 
     # test loading embeddings from txt file
-    vectors, word2id = reload_embeddings(path="corpora/data/mono/all.en-fr.60000.vec", dim=512)
+    vectors, word2id = reload_embeddings(path="corpora/mono/all.en-fr.60000.vec", dim=512)
     print(vectors.shape())
     print(word2id)

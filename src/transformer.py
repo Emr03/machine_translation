@@ -8,6 +8,7 @@ from .data.loader import *
 from .data_loading import get_parser
 from .data.dataset import *
 from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
+from .pretrain_embeddings import initialize_embeddings
 
 class Transformer(torch.nn.Module):
 
@@ -34,10 +35,6 @@ class Transformer(torch.nn.Module):
                 if m.bias is not None:
                     torch.nn.init.constant(m.bias, 0)
 
-            elif type(m) == torch.nn.Embedding:
-                # TODO: initialize to pretrained cross-lingual embeddings
-
-
         self.encoder.apply(init_weights)
         self.decoder.apply(init_weights)
         self.linear.apply(init_weights)
@@ -59,7 +56,9 @@ class Transformer(torch.nn.Module):
     def load_data(self, data_params):
 
         all_data = load_data(data_params)
+        self.data = all_data
         print(all_data)
+
         self.languages = list(all_data['dico'].keys())
 
         self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
@@ -71,9 +70,20 @@ class Transformer(torch.nn.Module):
 
         self.dictionary_lang1 = all_data['dico'][self.languages[0]]
         self.dictionary_lang2 = all_data['dico'][self.languages[1]]
+
+        # check dictionaries
+        with open("en_dict.txt", 'w') as f:
+            for key, value in self.dictionary_lang1.items():
+                f.write('%s:%s\n' % (key, value))
+
+        with open("fr_dict.txt", 'w') as f:
+            for key, value in self.dictionary_lang2.items():
+                f.write('%s:%s\n' % (key, value))
+
         self.pad_index = self.dictionary_lang1.index(PAD_WORD)
         self.eos_index = self.dictionary_lang1.index(EOS_WORD)
         self.bos_index = self.dictionary_lang1.index(BOS_WORD)
+
         print("pad_index", self.pad_index)
         print("eos_index", self.eos_index)
         print("bos_index", self.bos_index)
@@ -91,6 +101,10 @@ class Transformer(torch.nn.Module):
 	
         self.train_iterators = [self.lang1_train_iterator(), self.lang2_train_iterator()]
 
+        # TODO: initialize to pretrained cross-lingual embeddings
+        # embd_params =
+        # initialize_embeddings(self.encoder, self.decoder, embd_params, self.data)
+
     def reconstruction_loss(self, orig, output):
         # TODO
         pass
@@ -105,7 +119,11 @@ class Transformer(torch.nn.Module):
 
     def beam_search(self):
         # TODO
-        pass 
+        pass
+
+    def label_smoothing(self):
+        # TODO
+        pass
 
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
