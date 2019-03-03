@@ -28,6 +28,7 @@ class Transformer(torch.nn.Module):
         self.d_k = params["d_k"]
         self.n_langs = n_langs
         self.is_shared_emb = is_shared_emb
+        self.pad_index = 2
         assert(type(is_shared_emb) is bool)
 
         self.noise_model = NoiseModel(word_drop=0.1, permute_window=3)
@@ -81,7 +82,9 @@ class Transformer(torch.nn.Module):
                                   tgt_mask=tgt_mask,
                                   tgt_lang=tgt_lang)
 
-        return F.softmax(self.linear_layers[tgt_lang](dec_outputs), dim=-1)
+        return self.linear_layers[tgt_lang](dec_outputs)
+        # TODO: move to inference
+        # return F.softmax(self.linear_layers[tgt_lang](dec_outputs), dim=-1)
 
     def load_data(self, data_params):
 
@@ -195,7 +198,9 @@ class Transformer(torch.nn.Module):
             )
 
     def reconstruction_loss(self, orig, output):
-        return F.cross_entropy(input=output, target=orig)
+
+        return F.cross_entropy(input=torch.flatten(output, 0, 1),
+                               target=torch.flatten(orig))
 
     def enc_loss(self, orig, output):
         # TODO
@@ -216,20 +221,37 @@ class Transformer(torch.nn.Module):
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
         mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
+        print("mask", mask)
         return mask
 
-    def lm_loss(self):
+    def get_tgt_mask(self, tgt_batch):
 
+        batch_size, sent_len = tgt_batch.shape
+
+        # hide future words
+        tgt_m = np.tril(np.ones((batch_size, sent_len, sent_len)), k=0).astype(np.uint8)
+        print("tgt_m", tgt_m)
+
+        tgt_m = torch.from_numpy(tgt_m)
+
+        # hide padding
+        tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.pad_index, 0).unsqueeze_(1)
+        print("tgt_m", tgt_m)
+        return tgt_m
+
+    def lm_loss(self, src_batch):
+
+        # TODO: verify cross-entropy loss, implement more abstract version
         loss = 0
         for lang in range(self.n_langs):
 
-            src_batch = next(self.train_iterators[lang])
+            #src_batch = next(self.train_iterators[lang])
             src_mask = self.get_src_mask(src_batch)
             tgt_mask = self.get_tgt_mask(src_batch)
 
-            corr_src_batch = self.noise_model(src_batch)
+            #corr_src_batch = self.noise_model(src_batch)
 
-            output_seq = self.forward(input_seq=corr_src_batch,
+            output_seq = self.forward(input_seq=src_batch,
                          prev_output=src_batch,
                          src_mask=src_mask,
                          tgt_mask=tgt_mask,
@@ -264,14 +286,20 @@ if __name__ == "__main__":
     out = model(input_seq=x, prev_output=y, src_mask=src_m, tgt_mask=tgt_m, src_lang=1, tgt_lang=0)
     print(out.shape)
 
-    parser=get_parser()
-    data_params = parser.parse_args()
-    check_all_data_params(data_params)
-    model.load_data(data_params=data_params)
-    print('loaded data')
-    model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
-    print("initialized embeddings")
-    model.train_loop(train_iter=1)
+    # test lm_loss
+    x = torch.ones(2, 5, dtype=torch.int64)
+    x[:, -2:] = model.pad_index
+    loss = model.lm_loss(x)
+    print(loss)
+
+    # parser=get_parser()
+    # data_params = parser.parse_args()
+    # check_all_data_params(data_params)
+    # model.load_data(data_params=data_params)
+    # print('loaded data')
+    # model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
+    # print("initialized embeddings")
+    # model.train_loop(train_iter=1)
 
 
 
