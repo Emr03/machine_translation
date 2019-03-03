@@ -3,6 +3,7 @@ from .config import params
 from .encoder import *
 from .decoder import *
 from .sublayers import *
+from .noise_model import *
 import numpy as np
 from .data.loader import *
 from .data_loading import get_parser
@@ -29,6 +30,7 @@ class Transformer(torch.nn.Module):
         self.is_shared_emb = is_shared_emb
         assert(type(is_shared_emb) is bool)
 
+        self.noise_model = NoiseModel(word_drop=0.1, permute_window=3)
         self.encoder = StackedEncoder(n_layers=self.n_layers,
                                       params=params,
                                       n_langs=n_langs,
@@ -39,7 +41,7 @@ class Transformer(torch.nn.Module):
                                       n_langs=n_langs,
                                       is_shared_emb=is_shared_emb)
 
-        linear = torch.nn.Linear(self.d_model, self.vocab_size) 
+        linear = torch.nn.Linear(self.d_model, self.vocab_size)
         
         if self.is_shared_emb:
             self.linear_layers = [linear for _ in range(self.n_langs)]
@@ -193,8 +195,7 @@ class Transformer(torch.nn.Module):
             )
 
     def reconstruction_loss(self, orig, output):
-        # TODO
-        pass
+        return F.cross_entropy(input=output, target=orig)
 
     def enc_loss(self, orig, output):
         # TODO
@@ -214,24 +215,41 @@ class Transformer(torch.nn.Module):
 
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
-        mask.masked_fill_(src_batch == self.pad_index, 0)
+        mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
         return mask
 
-    def train_iter(self, src_batch, tgt_batch):
+    def lm_loss(self):
 
-        self.forward(src_batch)
+        loss = 0
+        for lang in range(self.n_langs):
+
+            src_batch = next(self.train_iterators[lang])
+            src_mask = self.get_src_mask(src_batch)
+            tgt_mask = self.get_tgt_mask(src_batch)
+
+            corr_src_batch = self.noise_model(src_batch)
+
+            output_seq = self.forward(input_seq=corr_src_batch,
+                         prev_output=src_batch,
+                         src_mask=src_mask,
+                         tgt_mask=tgt_mask,
+                         src_lang=lang,
+                         tgt_lang=lang)
+
+            loss += self.reconstruction_loss(output=output_seq, orig=src_batch)
+
+        return loss
 
     def train_loop(self, train_iter):
 
         for i in range(train_iter):
 
+
+
             src_lan = i % 2
             tgt_lan = (i + 1) % 2
-            src_batch = next(self.train_iterators[src_lan])
-            tgt_batch = next(self.train_iterators[tgt_lan])
-            print(src_batch)
-            src_mask = self.get_src_mask(src_batch[0])
-            print(src_mask)
+
+
             
 if __name__ == "__main__":
 
