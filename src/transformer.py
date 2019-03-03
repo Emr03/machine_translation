@@ -25,7 +25,8 @@ class Transformer(torch.nn.Module):
         self.n_layers = params["n_layers"]
         self.dff = params["dff"]
         self.d_k = params["d_k"]
-
+        self.n_langs = n_langs
+        self.is_shared_emb = is_shared_emb
         assert(type(is_shared_emb) is bool)
 
         self.encoder = StackedEncoder(n_layers=self.n_layers,
@@ -38,7 +39,13 @@ class Transformer(torch.nn.Module):
                                       n_langs=n_langs,
                                       is_shared_emb=is_shared_emb)
 
-        self.linear = torch.nn.Linear(self.d_model, self.vocab_size)
+        linear = torch.nn.Linear(self.d_model, self.vocab_size) 
+        
+        if self.is_shared_emb:
+            self.linear_layers = [linear for _ in range(self.n_langs)]
+        
+        else:
+            self.linear_layers = [torch.nn.Linear(self.d_model, self.vocab_size) for _ in range(self.n_langs)]
 
         self.data = None
 
@@ -111,27 +118,31 @@ class Transformer(torch.nn.Module):
             pretrained_0, word2id_0 = reload_embeddings(embedding_file, self.d_model)
 
             # replicate shared embeddings for each language
-            pretrained = [pretrained_0 for _ in range(params.n_langs)]
+            pretrained = [pretrained_0 for _ in range(self.n_langs)]
 
             # replicate shared dictionary for each language
-            word2id = [word2id_0 for _ in range(params.n_langs)]
+            word2id = [word2id_0 for _ in range(self.n_langs)]
 
         else:
-            assert len(split) == params.n_langs
-            assert not params.share_lang_emb
+            assert len(split) == self.n_langs
+            assert not self.is_shared_emb
             assert all(os.path.isfile(x) for x in split)
             pretrained = []
             word2id = []
             for path in split:
-                pretrained_i, word2id_i = reload_embeddings(path, params.emb_dim)
+                pretrained_i, word2id_i = reload_embeddings(path, self.emb_dim)
                 pretrained.append(pretrained_i)
                 word2id.append(word2id_i)
 
-        found = [0 for _ in range(params.n_langs)]
-        lower = [0 for _ in range(params.n_langs)]
+        found = [0 for _ in range(self.n_langs)]
+        lower = [0 for _ in range(self.n_langs)]
 
         # for every language
         for i, lang in enumerate(self.languages):
+            
+            # if shared embeddings across languages, just do this once
+            if self.is_shared_emb and i>0:
+                break
 
             # define dictionary / parameters to update
             dico = self.data['dico'][lang]
@@ -139,10 +150,10 @@ class Transformer(torch.nn.Module):
             # update the embedding layer of the encoder & decoder, for language i
             to_update = [self.encoder.embedding_layers[i].weight.data]
             to_update.append(self.decoder.embedding_layers[i].weight.data)
-            to_update.append(self.linear[i].weight.data)
+            to_update.append(self.linear_layers[i].weight.data)
 
             # for every word in that language
-            for word_id in range(params.n_words[i]):
+            for word_id in range(self.vocab_size):
                 word = dico[word_id]
 
                 # if word is in the dictionary of that language
@@ -152,7 +163,7 @@ class Transformer(torch.nn.Module):
                     found[i] += 1
 
                     # get the embedding vector for that word
-                    vec = torch.from_numpy(pretrained[i][word2id[i][word]]).cuda()
+                    vec = torch.from_numpy(pretrained[i][word2id[i][word]])
 
                     # for each embedding layer to update
                     # set the word_id's word vector to vec
@@ -163,17 +174,17 @@ class Transformer(torch.nn.Module):
                 elif word.lower() in word2id[i]:
                     found[i] += 1
                     lower[i] += 1
-                    vec = torch.from_numpy(pretrained[i][word2id[i][word.lower()]]).cuda()
+                    vec = torch.from_numpy(pretrained[i][word2id[i][word.lower()]])
                     for x in to_update:
                         x[word_id] = vec
 
         # print summary
-        for i, lang in enumerate(params.langs):
-            _found = found[0 if params.share_lang_emb else i]
-            _lower = lower[0 if params.share_lang_emb else i]
+        for i in range(self.n_langs):
+            _found = found[0 if self.is_shared_emb  else i]
+            _lower = lower[0 if self.is_shared_emb  else i]
             logger.info(
                 "Initialized %i / %i word embeddings for \"%s\" (including %i "
-                "after lowercasing)." % (_found, params.n_words[i], lang, _lower)
+                "after lowercasing)." % (_found, self.vocab_size, i, _lower)
             )
 
     def reconstruction_loss(self, orig, output):
@@ -226,7 +237,7 @@ if __name__ == "__main__":
     m = torch.from_numpy(m)
     print(m)
 
-    model = Transformer()
+    model = Transformer(n_langs=2)
     #out = model(input_seq=x, prev_output=y, mask=m)
     #print(out.shape)
 
