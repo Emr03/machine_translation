@@ -124,13 +124,13 @@ def initialize_embeddings(encoder, decoder, params, data):
         dico = data['dico'][lang]
 
         # update the embedding layer of the encoder, for language i
-        to_update = [encoder.embeddings[i].weight.data]
+        to_update = [encoder.embedding_layers[i].weight.data]
 
         # embeddings are not shared between the encoder and decoder
         if not params.share_encdec_emb:
-            to_update.append(decoder.embeddings[i].weight.data)
+            to_update.append(decoder.embedding_layers[i].weight.data)
 
-        # ??????
+        # tie the embedding weights to the
         if not params.share_decpro_emb and params.pretrained_out:
             to_update.append(decoder.proj[i].weight.data)
 

@@ -35,16 +35,29 @@ class DecoderLayer(torch.nn.Module):
 
 class StackedDecoder(torch.nn.Module):
 
-    def __init__(self, n_layers, params):
+    def __init__(self, n_layers, params, n_langs, is_shared_emb=True):
 
         super(StackedDecoder, self).__init__()
         self.d_model = params["d_model"]
         self.vocab_size = params["vocab_size"]
+        self.n_langs = n_langs
+
+        embd_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
+
+        if is_shared_emb:
+            self.embedding_layers = [embd_layer for _ in range(self.n_langs)]
+
+        else:
+            self.embedding_layers = [torch.nn.Embedding(self.vocab_size, self.d_model) for _ in range(self.n_langs)]
+
+        # freeze embedding layers
+        for l in self.embedding_layers:
+            l.weight.requires_grad = False
+
         self.pos_enc = PositionalEncoding(params)
-        self.embedding_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
         self.decoder_layers = [DecoderLayer(params) for _ in range(n_layers)]
 
-    def forward(self, dec_outputs, enc_outputs, mask):
+    def forward(self, dec_outputs, enc_outputs, mask, lang_id):
         """
 
         :param dec_outputs: in case of inference: words generated so far
@@ -53,6 +66,7 @@ class StackedDecoder(torch.nn.Module):
         :param mask:
         :return:
         """
+        dec_outputs = self.embedding_layers[lang_id](dec_outputs)
         dec_outputs = self.pos_enc(dec_outputs)
         for layer in self.decoder_layers:
             dec_outputs = layer(dec_outputs=dec_outputs, enc_outputs=enc_outputs, mask=mask)
@@ -70,6 +84,8 @@ if __name__ == "__main__":
     print(out.shape)
 
     # test decoder stack
-    dec = StackedDecoder(n_layers=6, params=params)
-    out = dec(x, x, m)
+    x = torch.zeros(20, 5, dtype=torch.int64)
+    y = torch.zeros(20, 5, 512, dtype=torch.float32)
+    dec = StackedDecoder(n_layers=6, params=params, lang_ids=['en', 'fr'])
+    out = dec(x, y, m, 0)
     print(out.shape)
