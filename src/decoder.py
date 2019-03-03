@@ -16,21 +16,19 @@ class DecoderLayer(torch.nn.Module):
         self.layer_norm_3 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.dropout = torch.nn.Dropout(params["dropout"])
 
-    def forward(self, dec_outputs, enc_outputs, mask):
+    def forward(self, dec_outputs, enc_outputs, src_mask, tgt_mask):
 
-        out = self.layer_norm_1(self.masked_attn(x_q=dec_outputs,
+        out = self.layer_norm_1(self.dropout(self.masked_attn(x_q=dec_outputs,
                                                  x_k=dec_outputs,
                                                  x_v=dec_outputs,
-                                                 mask=mask) + dec_outputs)
-        out = self.dropout(out)
-        out = self.layer_norm_2(self.attn(x_q=out,
+                                                 mask=tgt_mask)) + dec_outputs)
+
+        out = self.layer_norm_2(self.dropout(self.attn(x_q=out,
                                           x_k = enc_outputs,
-                                          x_v = enc_outputs) + out)
+                                          x_v = enc_outputs,
+                                          mask=src_mask)) + out)
 
-        out = self.dropout(out)
-        out = self.layer_norm_3(self.ffnn(out) + out)
-        out = self.dropout(out)
-
+        out = self.layer_norm_3(self.dropout(self.ffnn(out)) + out)
         return out
 
 class StackedDecoder(torch.nn.Module):
@@ -57,7 +55,7 @@ class StackedDecoder(torch.nn.Module):
         self.pos_enc = PositionalEncoding(params)
         self.decoder_layers = [DecoderLayer(params) for _ in range(n_layers)]
 
-    def forward(self, dec_outputs, enc_outputs, mask, lang_id):
+    def forward(self, dec_outputs, enc_outputs, src_mask, tgt_mask, lang_id):
         """
 
         :param dec_outputs: in case of inference: words generated so far
@@ -69,7 +67,10 @@ class StackedDecoder(torch.nn.Module):
         dec_outputs = self.embedding_layers[lang_id](dec_outputs)
         dec_outputs = self.pos_enc(dec_outputs)
         for layer in self.decoder_layers:
-            dec_outputs = layer(dec_outputs=dec_outputs, enc_outputs=enc_outputs, mask=mask)
+            dec_outputs = layer(dec_outputs=dec_outputs,
+                                enc_outputs=enc_outputs,
+                                src_mask = src_mask,
+                                tgt_mask = tgt_mask)
 
         return dec_outputs
 
@@ -77,15 +78,18 @@ if __name__ == "__main__":
     from src.config import params
     # test decoder layer
     x = torch.zeros(20, 5, 512, dtype=torch.float32)
-    m = torch.zeros(1, 5)
-    m[:, 0] = 1
+    tgt_m = torch.zeros(1, 5)
+    tgt_m[:, 0] = 1
+    src_m = torch.ones(20, 5)
+    src_m[:, -2:-1] = 0
+    src_m = src_m.unsqueeze(-2).unsqueeze(-2)
     dec_layer = DecoderLayer(params)
-    out = dec_layer(dec_outputs=x, enc_outputs=x, mask=m)
+    out = dec_layer(dec_outputs=x, enc_outputs=x, src_mask=src_m,  tgt_mask=tgt_m)
     print(out.shape)
 
     # test decoder stack
     x = torch.zeros(20, 5, dtype=torch.int64)
     y = torch.zeros(20, 5, 512, dtype=torch.float32)
-    dec = StackedDecoder(n_layers=6, params=params, lang_ids=['en', 'fr'])
-    out = dec(x, y, m, 0)
+    dec = StackedDecoder(n_layers=6, params=params, n_langs=2)
+    out = dec(x, y, src_mask=src_m,  tgt_mask=tgt_m, lang_id=0)
     print(out.shape)

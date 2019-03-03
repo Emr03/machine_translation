@@ -61,19 +61,25 @@ class Transformer(torch.nn.Module):
         self.decoder.apply(init_weights)
         #self.linear.apply(init_weights)
 
-    def encode(self, input_seq):
+    def encode(self, input_seq, src_mask, src_lang):
 
-        return self.encoder(input_seq)
+        return self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
 
-    def decode(self, prev_output, latent_seq, mask):
+    def decode(self, prev_output, latent_seq, src_mask, tgt_mask, tgt_lang):
 
-        return self.decoder(prev_output, latent_seq, mask=mask)
+        return self.decoder(prev_output, latent_seq, src_mask=src_mask, tgt_mask=tgt_mask, lang_id=tgt_lang)
 
-    def forward(self, input_seq, prev_output, mask):
+    def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
-        latent = self.encode(input_seq)
-        dec_outputs = self.decode(prev_output=prev_output, latent_seq=latent, mask=mask)
-        return F.softmax(self.linear(dec_outputs), dim=-1)
+        latent = self.encode(input_seq, src_mask, src_lang)
+
+        dec_outputs = self.decode(prev_output=prev_output,
+                                  latent_seq=latent,
+                                  src_mask=src_mask,
+                                  tgt_mask=tgt_mask,
+                                  tgt_lang=tgt_lang)
+
+        return F.softmax(self.linear_layers[tgt_lang](dec_outputs), dim=-1)
 
     def load_data(self, data_params):
 
@@ -85,8 +91,7 @@ class Transformer(torch.nn.Module):
 
         self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
                                 all_data['mono'][self.languages[1]]['train']]
-	
-        print('batch_size', self.mono_data_train[0].batch_size)
+
         self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
                                 all_data['mono'][self.languages[1]]['valid']]
 
@@ -231,15 +236,15 @@ class Transformer(torch.nn.Module):
 if __name__ == "__main__":
 
     # test transformer
-    x = torch.zeros(20, 5, 512, dtype=torch.float32)
-    y = torch.zeros(20, 7, 512, dtype=torch.float32)
-    m = np.tril(np.ones((1, 7, 7)), k=0).astype(np.uint8)
-    m = torch.from_numpy(m)
-    print(m)
+    x = torch.zeros(20, 5, dtype=torch.int64)
+    y = torch.zeros(20, 7, dtype=torch.int64)
+    tgt_m = np.tril(np.ones((1, 7, 7)), k=0).astype(np.uint8)
+    tgt_m = torch.from_numpy(tgt_m)
 
+    src_m = torch.zeros(20, 5).unsqueeze(-2).unsqueeze(-2)
     model = Transformer(n_langs=2)
-    #out = model(input_seq=x, prev_output=y, mask=m)
-    #print(out.shape)
+    out = model(input_seq=x, prev_output=y, src_mask=src_m, tgt_mask=tgt_m, src_lang=1, tgt_lang=0)
+    print(out.shape)
 
     parser=get_parser()
     data_params = parser.parse_args()
@@ -248,7 +253,7 @@ if __name__ == "__main__":
     print('loaded data')
     model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
     print("initialized embeddings")
-    #model.train_loop(train_iter=1)
+    model.train_loop(train_iter=1)
 
 
 

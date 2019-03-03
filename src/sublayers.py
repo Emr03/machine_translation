@@ -119,8 +119,10 @@ if __name__ == "__main__":
     att(x, x, x)
 
     # test self-attention with masking
-    mask = torch.zeros(1, 5)
+    mask = torch.zeros(3, 5)
     mask[:, 0:2] = 1
+    mask = mask.unsqueeze(-2).unsqueeze(-2)
+    print("mask ", mask.shape)
     out = att(x, x, x, mask=mask)
     print(out)
 
