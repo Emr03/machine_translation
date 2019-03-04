@@ -1,14 +1,14 @@
 import torch
-from .data.dataset import *
+import numpy as np
+from .data.utils import *
 
 class NoiseModel(torch.nn.Module):
 
-    def __init__(self, data, params):
+    def __init__(self, data):
+
         super(NoiseModel, self).__init__()
         #data is sentences from one language
         self.data = data
-        self.params = params
-        self.iterators = {}
         # initialize BPE subwords
         self.init_bpe()
 
@@ -20,7 +20,6 @@ class NoiseModel(torch.nn.Module):
         for lang in self.params.langs:
             dico = self.data['dico'][lang]
             self.bpe_end.append(np.array([not dico[i].endswith('@@') for i in range(len(dico))]))
-        print("bpe_end is " + str(self.bpe_end))
 
     def word_shuffle(self, x, l, lang_id):
         """
@@ -131,62 +130,3 @@ class NoiseModel(torch.nn.Module):
         words, lengths = self.word_dropout(words, lengths, lang_id)
         words, lengths = self.word_blank(words, lengths, lang_id)
         return words, lengths
-
-    def forward(self, x):
-        #TODO: define a forward function for pytorch module so backprop can be used to train the DAE
-        pass
-
-    def test_noise(self, lang):
-        """
-        Print out unnoised and noised sentences for a language
-        """
-
-        lang_id = self.params.lang2id[lang]
-        sent1, len1 = self.get_batch('encdec', lang, None)
-        print("sent1 before noise is ")
-        print(sent1)
-        print("len1 before noise is ")
-        print(len1)
-
-        sent1, len1 = self.add_noise(sent1, len1, lang_id)
-
-        print('sent1 after noise for ' + lang + ' is')
-        print(sent1)
-        print('len1 for ' + lang + " is ")
-        print(len1)
-
-    def get_iterator(self, iter_name, lang1, lang2, back):
-        """
-        Create a new iterator for a dataset.
-        """
-        assert back is False or lang2 is not None
-        key = ','.join([x for x in [iter_name, lang1, lang2] if x is not None]) + ('_back' if back else '')
-        # logger.info("Creating new training %s iterator ..." % key)
-        if lang2 is None:
-            dataset = self.data['mono'][lang1]['train']
-        elif back:
-            dataset = self.data['back'][(lang1, lang2)]
-        else:
-            k = (lang1, lang2) if lang1 < lang2 else (lang2, lang1)
-            dataset = self.data['para'][k]['train']
-        iterator = dataset.get_iterator(shuffle=True, group_by_size=self.params.group_by_size)()
-        self.iterators[key] = iterator
-        return iterator
-
-    def get_batch(self, iter_name, lang1, lang2, back=False):
-        """
-        Return a batch of sentences from a dataset.
-        """
-        assert back is False or lang2 is not None
-        assert lang1 in self.params.langs
-        assert lang2 is None or lang2 in self.params.langs
-        key = ','.join([x for x in [iter_name, lang1, lang2] if x is not None]) + ('_back' if back else '')
-        iterator = self.iterators.get(key, None)
-        if iterator is None:
-            iterator = self.get_iterator(iter_name, lang1, lang2, back)
-        try:
-            batch = next(iterator)
-        except StopIteration:
-            iterator = self.get_iterator(iter_name, lang1, lang2, back)
-            batch = next(iterator)
-        return batch if (lang2 is None or lang1 < lang2 or back) else batch[::-1]
