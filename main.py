@@ -1,5 +1,7 @@
-from .data.loader import *
 import argparse
+from src.data.loader import *
+from src.noise_model import NoiseModel
+from src.utils import *
 
 def get_parser():
     # parse parameters
@@ -44,15 +46,30 @@ def get_parser():
     # training parameters
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Batch size")
+    parser.add_argument("--group_by_size", type=bool_flag, default=True,
+                        help="Sort sentences by size during the training")
+
+    #Denoising autoencoder parameters
+    parser.add_argument("--mono_directions", type=str, default="",
+                        help="Training directions (lang1,lang2)")
+    parser.add_argument("--word_shuffle", type=float, default=0,
+                        help="Randomly shuffle input words (0 to disable)")
+    parser.add_argument("--word_dropout", type=float, default=0,
+                        help="Randomly dropout input words (0 to disable)")
+    parser.add_argument("--word_blank", type=float, default=0,
+                        help="Randomly blank input words (0 to disable)")
     return parser
 
 def main(params):
     check_all_data_params(params)
     data = load_data(params)
+    noiseModel = NoiseModel(data, params)
+    for lang in params.mono_directions:
+        noiseModel.test_noise(lang)
     print(data)
 
 if __name__ == '__main__':
     parser = get_parser()
     params = parser.parse_args()
     print(params)
-    #main(params)
+    main(params)

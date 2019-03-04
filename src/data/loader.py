@@ -9,7 +9,7 @@ import os
 from logging import getLogger
 import torch
 
-from .utils import create_word_masks
+from src.utils import create_word_masks
 from .dataset import MonolingualDataset, ParallelDataset
 from .dictionary import EOS_WORD, PAD_WORD, UNK_WORD, SPECIAL_WORD, SPECIAL_WORDS
 
@@ -381,12 +381,12 @@ def check_all_data_params(params):
     #         assert params.para_dataset[k][0] != ''
 
     # check mono directions
-    # params.mono_directions = [x for x in params.mono_directions.split(',') if len(x) > 0]
-    # if len(params.mono_directions) > 0:
-    #     assert params.n_mono != 0
-    #     assert type(params.mono_directions) is list
-    #     assert all(lang in params.langs for lang in params.mono_directions)
-    #     assert all(lang in params.mono_dataset for lang in params.mono_directions)
+    params.mono_directions = [x for x in params.mono_directions.split(',') if len(x) > 0]
+    if len(params.mono_directions) > 0:
+        assert params.n_mono != 0
+        assert type(params.mono_directions) is list
+        assert all(lang in params.langs for lang in params.mono_directions)
+        assert all(lang in params.mono_dataset for lang in params.mono_directions)
     #
     # # check directions with pivot
     # params.pivo_directions = [x.split('-') for x in params.pivo_directions.split(',') if len(x) > 0]
@@ -471,16 +471,16 @@ def check_all_data_params(params):
     # assert not (params.lambda_xe_otfa == "0") ^ (len([True for _, lang2, lang3 in params.pivo_directions if lang2 == lang3]) == 0)
     #
     # # max length / max vocab / sentence noise
-    # assert params.max_len > 0
-    # assert params.max_vocab == -1 or params.max_vocab > 0
-    # if len(params.mono_directions) == 0:
-    #     assert params.word_shuffle == 0
-    #     assert params.word_dropout == 0
-    #     assert params.word_blank == 0
-    # else:
-    #     assert params.word_shuffle == 0 or params.word_shuffle > 1
-    #     assert 0 <= params.word_dropout < 1
-    #     assert 0 <= params.word_blank < 1
+    assert params.max_len > 0
+    assert params.max_vocab == -1 or params.max_vocab > 0
+    if len(params.mono_directions) == 0:
+         assert params.word_shuffle == 0
+         assert params.word_dropout == 0
+         assert params.word_blank == 0
+    else:
+         assert params.word_shuffle == 0 or params.word_shuffle > 1
+         assert 0 <= params.word_dropout < 1
+         assert 0 <= params.word_blank < 1
 
 
 def load_data(params, mono_only=False):
