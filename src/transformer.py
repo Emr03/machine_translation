@@ -106,7 +106,7 @@ class Transformer(torch.nn.Module):
         self.bos_index = data_params.bos_index
 
         self.train_iterators = [self.mono_data_train[l].get_iterator(shuffle=True, group_by_size=True)
-                                for l in self.languages]
+                                for l in range(len(self.languages))]
 
         self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
                               for l in self.languages]
@@ -307,4 +307,3 @@ if __name__ == "__main__":
     model.lm_loss(src_batch=batch, lengths=len, lang=0)
     print(batch)
     print(len)
-    
