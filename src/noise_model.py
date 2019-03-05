@@ -8,14 +8,14 @@ from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
 
 class NoiseModel():
 
-    def __init__(self, data, langs, params):
+    def __init__(self, data, params):
 
         super(NoiseModel, self).__init__()
 
         self.data = data
-        self.langs = langs
+        self.langs = list(data['dico'].keys())
         self.iterators = {}
-
+        self.params = params
         # initialize BPE subwords
         self.init_bpe()
 
@@ -125,7 +125,7 @@ class NoiseModel():
                 new_s.append(words[np.random.randint(1, len(words))])
 
             new_s.append(self.params.eos_index)
-            assert len(new_s) >= 3 and new_s[0] == self.params.bos_index and new_s[-1] == self.params.eos_index
+            assert len(new_s) >= 3 and new_s[0] == self.params.bos_index[lang_id] and new_s[-1] == self.params.eos_index
             sentences.append(new_s)
             lengths.append(len(new_s))
 
@@ -245,7 +245,7 @@ def main(params):
     # what's in bpe_end
     noiseModel.init_bpe()
 
-    for lang in params.mono_directions:
+    for lang in params.langs:
         noiseModel.test_noise(lang)
 
     #print(data)

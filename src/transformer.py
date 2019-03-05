@@ -11,11 +11,10 @@ from .data.dataset import *
 from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
 from .pretrain_embeddings import *
 
-class Transformer(torch.nn.Module):
 
+class Transformer(torch.nn.Module):
     def __init__(self, n_langs, is_shared_emb=True):
         """
-
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
         """
@@ -29,7 +28,6 @@ class Transformer(torch.nn.Module):
         self.d_k = params["d_k"]
         self.n_langs = n_langs
         self.is_shared_emb = is_shared_emb
-        self.pad_index = 2
 
         # will be set in load_data
         self.data = None
@@ -49,10 +47,10 @@ class Transformer(torch.nn.Module):
                                       is_shared_emb=is_shared_emb)
 
         linear = torch.nn.Linear(self.d_model, self.vocab_size)
-        
+
         if self.is_shared_emb:
             self.linear_layers = [linear for _ in range(self.n_langs)]
-        
+
         else:
             self.linear_layers = [torch.nn.Linear(self.d_model, self.vocab_size) for _ in range(self.n_langs)]
 
@@ -106,15 +104,15 @@ class Transformer(torch.nn.Module):
         self.dictionaries = all_data['dico']
 
         # by construction, special indices are the same for all languages
-        self.pad_index = self.dictionaries[self.languages[0]].index(PAD_WORD)
-        self.eos_index = self.dictionaries[self.languages[0]].index(EOS_WORD)
-        self.bos_index = self.dictionaries[self.languages[0]].index(BOS_WORD)
+        self.pad_index = data_params.pad_index
+        self.eos_index = data_params.eos_index
+        self.bos_index = data_params.bos_index
 
         self.train_iterators = [self.mono_data_train[l].get_iterator(shuffle=True, group_by_size=True)
                                 for l in self.languages]
 
         self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
-                                for l in self.languages]
+                              for l in self.languages]
 
         self.noise_model = NoiseModel(data=self.data, params=data_params)
 
@@ -152,9 +150,9 @@ class Transformer(torch.nn.Module):
 
         # for every language
         for i, lang in enumerate(self.languages):
-            
+
             # if shared embeddings across languages, just do this once
-            if self.is_shared_emb and i>0:
+            if self.is_shared_emb and i > 0:
                 break
 
             # define dictionary / parameters to update
@@ -242,40 +240,35 @@ class Transformer(torch.nn.Module):
         print("tgt_m", tgt_m)
         return tgt_m
 
-    def lm_loss(self, src_batch, lengths):
+    def lm_loss(self, src_batch, lang):
 
         # TODO: verify cross-entropy loss, implement more abstract version
         loss = 0
-        for lang in range(self.n_langs):
 
-            corr_src_batch = self.noise_model.add_noise(src_batch, lengths, lang)
-            src_mask = self.get_src_mask(src_batch)
-            tgt_mask = self.get_tgt_mask(src_batch)
+        tgt_mask = self.get_tgt_mask(src_batch)
 
-            output_seq = self.forward(input_seq=corr_src_batch,
-                         prev_output=src_batch,
-                         src_mask=src_mask,
-                         tgt_mask=tgt_mask,
-                         src_lang=lang,
-                         tgt_lang=lang)
+        corr_src_batch = self.noise_model.add_noise(src_batch, lengths, lang)
+        src_mask = self.get_src_mask(corr_src_batch)
 
-            loss += self.reconstruction_loss(output=output_seq, orig=src_batch)
+        output_seq = self.forward(input_seq=corr_src_batch,
+                                  prev_output=src_batch,
+                                  src_mask=src_mask,
+                                  tgt_mask=tgt_mask,
+                                  src_lang=lang,
+                                  tgt_lang=lang)
+
+        loss += self.reconstruction_loss(output=output_seq, orig=src_batch)
 
         return loss
 
     def train_loop(self, train_iter):
 
         for i in range(train_iter):
-
-
-
             src_lan = i % 2
             tgt_lan = (i + 1) % 2
 
 
-            
 if __name__ == "__main__":
-
     # test transformer
     x = torch.zeros(20, 5, dtype=torch.int64)
     y = torch.zeros(20, 7, dtype=torch.int64)
@@ -289,26 +282,17 @@ if __name__ == "__main__":
 
     # test lm_loss
     x = torch.ones(2, 5, dtype=torch.int64)
-    l = torch.ones(2, dtype=torch.int32)*5
-    #x[:, -2:] = model.pad_index
-    loss = model.lm_loss(x, l)
+    x[:, -2:] = model.pad_index
+    loss = model.lm_loss(x, 1)
     print(loss)
 
-    parser=get_parser()
+    parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     model.load_data(data_params=data_params)
     print('loaded data')
     model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
     print("initialized embeddings")
-    #model.train_loop(train_iter=1)
-
+    # model.train_loop(train_iter=1)
     # test noise model
     model.noise_model
-
-
-
-
-
-
-
