@@ -19,8 +19,9 @@ class Transformer(torch.nn.Module):
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
         """
-
         super(Transformer, self).__init__()
+        assert (type(is_shared_emb) is bool)
+
         self.d_model = params["d_model"]
         self.vocab_size = params["vocab_size"]
         self.n_layers = params["n_layers"]
@@ -29,9 +30,14 @@ class Transformer(torch.nn.Module):
         self.n_langs = n_langs
         self.is_shared_emb = is_shared_emb
         self.pad_index = 2
-        assert(type(is_shared_emb) is bool)
 
-        self.noise_model = NoiseModel(word_drop=0.1, permute_window=3)
+        # will be set in load_data
+        self.data = None
+        self.bos_index = None
+        self.eos_index = None
+        self.pad_index = None
+        self.noise_model = None
+
         self.encoder = StackedEncoder(n_layers=self.n_layers,
                                       params=params,
                                       n_langs=n_langs,
@@ -50,8 +56,6 @@ class Transformer(torch.nn.Module):
         else:
             self.linear_layers = [torch.nn.Linear(self.d_model, self.vocab_size) for _ in range(self.n_langs)]
 
-        self.data = None
-
         def init_weights(m):
 
             if type(m) == torch.nn.Linear:
@@ -62,7 +66,6 @@ class Transformer(torch.nn.Module):
 
         self.encoder.apply(init_weights)
         self.decoder.apply(init_weights)
-        #self.linear.apply(init_weights)
 
     def encode(self, input_seq, src_mask, src_lang):
 
@@ -100,20 +103,21 @@ class Transformer(torch.nn.Module):
         self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
                                 all_data['mono'][self.languages[1]]['valid']]
 
-        self.dictionary_lang1 = all_data['dico'][self.languages[0]]
-        self.dictionary_lang2 = all_data['dico'][self.languages[1]]
+        self.dictionaries = all_data['dico']
 
-        self.pad_index = self.dictionary_lang1.index(PAD_WORD)
-        self.eos_index = self.dictionary_lang1.index(EOS_WORD)
-        self.bos_index = self.dictionary_lang1.index(BOS_WORD)
+        # by construction, special indices are the same for all languages
+        self.pad_index = self.dictionaries[self.languages[0]].index(PAD_WORD)
+        self.eos_index = self.dictionaries[self.languages[0]].index(EOS_WORD)
+        self.bos_index = self.dictionaries[self.languages[0]].index(BOS_WORD)
 
-        self.lang1_train_iterator = self.mono_data_train[0].get_iterator(shuffle=True,
-                                                                            group_by_size=False)
+        self.train_iterators = [self.mono_data_train[l].get_iterator(shuffle=True, group_by_size=True)
+                                for l in self.languages]
 
-        self.lang2_train_iterator = self.mono_data_train[1].get_iterator(shuffle=True,
-                                                                            group_by_size=False)
+        self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
+                                for l in self.languages]
 
-        self.train_iterators = [self.lang1_train_iterator(), self.lang2_train_iterator()]
+        self.noise_model = NoiseModel(data=self.data, langs=self.languages,
+                                      word_drop=0.1, word_shuffle=3)
 
     def initialize_embeddings(self, embedding_file):
 
@@ -292,14 +296,17 @@ if __name__ == "__main__":
     loss = model.lm_loss(x)
     print(loss)
 
-    # parser=get_parser()
-    # data_params = parser.parse_args()
-    # check_all_data_params(data_params)
-    # model.load_data(data_params=data_params)
-    # print('loaded data')
-    # model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
-    # print("initialized embeddings")
-    # model.train_loop(train_iter=1)
+    parser=get_parser()
+    data_params = parser.parse_args()
+    check_all_data_params(data_params)
+    model.load_data(data_params=data_params)
+    print('loaded data')
+    model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
+    print("initialized embeddings")
+    #model.train_loop(train_iter=1)
+
+    # test noise model
+    model.noise_model
 
 
 

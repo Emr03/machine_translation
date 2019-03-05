@@ -41,6 +41,18 @@ def get_parser():
     parser.add_argument("--max_vocab", type=int, default=-1,
                         help="Maximum vocabulary size (-1 to disable)")
 
+    # temporary
+    parser.add_argument("--group_by_size", type=bool, default=True,
+                        help="Sort sentences by size during the training")
+    parser.add_argument("--mono_directions", type=str, default="",
+                        help="Training directions (lang1,lang2)")
+    parser.add_argument("--word_shuffle", type=float, default=0,
+                        help="Randomly shuffle input words (0 to disable)")
+    parser.add_argument("--word_dropout", type=float, default=0,
+                        help="Randomly dropout input words (0 to disable)")
+    parser.add_argument("--word_blank", type=float, default=0,
+                        help="Randomly blank input words (0 to disable)")
+
     # training parameters
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Batch size")

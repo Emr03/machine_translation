@@ -2,15 +2,20 @@ import torch
 from .data.dataset import *
 from .data.loader import *
 from .data_loading import get_parser
+from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
+
+# TODO: switch to new batch shape
 
 class NoiseModel():
 
-    def __init__(self, data, params):
+    def __init__(self, data, langs, params):
+
         super(NoiseModel, self).__init__()
-        #data is sentences from one language
+
         self.data = data
-        self.params = params
+        self.langs = langs
         self.iterators = {}
+
         # initialize BPE subwords
         self.init_bpe()
 
@@ -21,86 +26,113 @@ class NoiseModel():
         self.bpe_end = []
 
         # for each language
-        for lang in self.params.langs:
+        for lang in self.langs:
             # get bpe dictionary for that language
             dico = self.data['dico'][lang]
 
             # for each token in the dictionary, indicate if it does not end with @@
-            # add the numpy array to bpe end
-            # bpe ends with
+            # indicate which tokens are at the end of a word
             self.bpe_end.append(np.array([not dico[i].endswith('@@') for i in range(len(dico))]))
 
         print("bpe_end is " + str(self.bpe_end))
 
     def word_shuffle(self, x, l, lang_id):
         """
-
-        :param x: batch of sentences shape (max len, batch_size)
+        verified
+        :param x: batch of sentences shape (max len, batch_size), containing indices of bpe tokens
         :param l: vector of length for eah sentence
         :param lang_id: language of input sentence batch
         :return:
         """
-        if self.params.word_shuffle == 0:
+        if self.params.word_shuffle== 0:
             return x, l
 
         # define noise word scores
-        #
+        # use x.size(0) - 1 to avoid eos
         noise = np.random.uniform(0, self.params.word_shuffle, size=(x.size(0) - 1, x.size(1)))
         noise[0] = -1  # do not move start sentence symbol
 
         # be sure to shuffle entire words
-        #
+        # get the bpe_end boolean indiators from indices in batch x
         bpe_end = self.bpe_end[lang_id][x]
+
+        # count the number of non-end of words,
+        # the number in each cell indicates the word (order) index that this token belongs to
         word_idx = bpe_end[::-1].cumsum(0)[::-1]
         word_idx = word_idx.max(0)[None, :] - word_idx
 
         assert self.params.word_shuffle > 1
-        x2 = x.clone()
+        x2 = x.clone()#
+
+        # for each sentence i in the batch
         for i in range(l.size(0)):
             # generate a random permutation
+
+            # for each element of word_idx for sent i, add noise
+            # noise is indexed using word_idx so tokens from the same word get the same score
             scores = word_idx[:l[i] - 1, i] + noise[word_idx[:l[i] - 1, i], i]
-            scores += 1e-6 * np.arange(l[i] - 1)  # ensure no reordering inside a word
+            scores += 1e-6 * np.arange(l[i] - 1)
+
+            # sort the scores, get indices from sorted array
+            # since word_idx assigns the same int to tokens of the same word
+            # tokens from the same word remain contiguous
             permutation = scores.argsort()
-            # shuffle words
+
+            # get sentence tokens (except bos and eos and padding)
+            # use indies from permutation to shuffle the words
             x2[:l[i] - 1, i].copy_(x2[:l[i] - 1, i][torch.from_numpy(permutation)])
+
         return x2, l
 
     def word_dropout(self, x, l, lang_id):
         """
-        Randomly drop input words.
+        verified
+        :param x: batch of sentences shape (max len, batch_size), containing indices of bpe tokens
+        :param l: vector of length for each sentence
+        :param lang_id:
+        :return:
         """
         if self.params.word_dropout == 0:
             return x, l
         assert 0 < self.params.word_dropout < 1
 
-        # define words to drop
-        bos_index = self.params.bos_index[lang_id]
-        assert (x[0] == bos_index).sum() == l.size(0)
+        assert (x[0] == self.params.bos_index[lang_id]).sum() == l.size(0)
+
+        # get boolean array for words to keep, with prob (1 - word_dropout)
         keep = np.random.rand(x.size(0) - 1, x.size(1)) >= self.params.word_dropout
         keep[0] = 1  # do not drop the start sentence symbol
 
-        # be sure to drop entire words
+        # index tokens based on which word they belong to
         bpe_end = self.bpe_end[lang_id][x]
         word_idx = bpe_end[::-1].cumsum(0)[::-1]
         word_idx = word_idx.max(0)[None, :] - word_idx
 
         sentences = []
         lengths = []
+        # for each sentence in the batch
+        # here "words" refers to bpe tokens
         for i in range(l.size(0)):
             assert x[l[i] - 1, i] == self.params.eos_index
             words = x[:l[i] - 1, i].tolist()
+
             # randomly drop words from the input
+            # use word_idx to index keep, to drop entire words
             new_s = [w for j, w in enumerate(words) if keep[word_idx[j, i], i]]
+
             # we need to have at least one word in the sentence (more than the start / end sentence symbols)
             if len(new_s) == 1:
+                # this is fine, since tokens of the same word have the same number in word_idx
                 new_s.append(words[np.random.randint(1, len(words))])
+
             new_s.append(self.params.eos_index)
-            assert len(new_s) >= 3 and new_s[0] == bos_index and new_s[-1] == self.params.eos_index
+            assert len(new_s) >= 3 and new_s[0] == self.params.bos_index and new_s[-1] == self.params.eos_index
             sentences.append(new_s)
             lengths.append(len(new_s))
+
         # re-construct input
         l2 = torch.LongTensor(lengths)
         x2 = torch.LongTensor(l2.max(), l2.size(0)).fill_(self.params.pad_index)
+
         for i in range(l2.size(0)):
             x2[:l2[i], i].copy_(torch.LongTensor(sentences[i]))
         return x2, l2
@@ -133,6 +165,7 @@ class NoiseModel():
             new_s.append(self.params.eos_index)
             assert len(new_s) == l[i] and new_s[0] == bos_index and new_s[-1] == self.params.eos_index
             sentences.append(new_s)
+
         # re-construct input
         x2 = torch.LongTensor(l.max(), l.size(0)).fill_(self.params.pad_index)
         for i in range(l.size(0)):
@@ -214,7 +247,7 @@ def main(params):
 
     for lang in params.mono_directions:
         noiseModel.test_noise(lang)
-    
+
     #print(data)
 
 if __name__ == '__main__':
