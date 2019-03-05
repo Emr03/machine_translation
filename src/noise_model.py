@@ -1,14 +1,16 @@
 import torch
-import numpy as np
-from .data.utils import *
+from .data.dataset import *
+from .data.loader import *
+from .data_loading import get_parser
 
-class NoiseModel(torch.nn.Module):
+class NoiseModel():
 
-    def __init__(self, data):
-
+    def __init__(self, data, params):
         super(NoiseModel, self).__init__()
         #data is sentences from one language
         self.data = data
+        self.params = params
+        self.iterators = {}
         # initialize BPE subwords
         self.init_bpe()
 
@@ -17,22 +19,37 @@ class NoiseModel(torch.nn.Module):
         Index BPE words.
         """
         self.bpe_end = []
+
+        # for each language
         for lang in self.params.langs:
+            # get bpe dictionary for that language
             dico = self.data['dico'][lang]
+
+            # for each token in the dictionary, indicate if it does not end with @@
+            # add the numpy array to bpe end
+            # bpe ends with
             self.bpe_end.append(np.array([not dico[i].endswith('@@') for i in range(len(dico))]))
+
+        print("bpe_end is " + str(self.bpe_end))
 
     def word_shuffle(self, x, l, lang_id):
         """
-        Randomly shuffle input words.
+
+        :param x: batch of sentences shape (max len, batch_size)
+        :param l: vector of length for eah sentence
+        :param lang_id: language of input sentence batch
+        :return:
         """
         if self.params.word_shuffle == 0:
             return x, l
 
         # define noise word scores
+        #
         noise = np.random.uniform(0, self.params.word_shuffle, size=(x.size(0) - 1, x.size(1)))
         noise[0] = -1  # do not move start sentence symbol
 
         # be sure to shuffle entire words
+        #
         bpe_end = self.bpe_end[lang_id][x]
         word_idx = bpe_end[::-1].cumsum(0)[::-1]
         word_idx = word_idx.max(0)[None, :] - word_idx
@@ -130,3 +147,79 @@ class NoiseModel(torch.nn.Module):
         words, lengths = self.word_dropout(words, lengths, lang_id)
         words, lengths = self.word_blank(words, lengths, lang_id)
         return words, lengths
+
+    def test_noise(self, lang):
+        """
+        Print out unnoised and noised sentences for a language
+        """
+
+        lang_id = self.params.lang2id[lang]
+        sent1, len1 = self.get_batch('encdec', lang, None)
+        print("sent1 before noise is ")
+        print(sent1)
+        print("len1 before noise is ")
+        print(len1)
+
+        sent1, len1 = self.add_noise(sent1, len1, lang_id)
+
+        print('sent1 after noise for ' + lang + ' is')
+        print(sent1)
+        print('len1 for ' + lang + " is ")
+        print(len1)
+
+    def get_iterator(self, iter_name, lang1, lang2, back):
+        """
+        Create a new iterator for a dataset.
+        """
+        assert back is False or lang2 is not None
+        key = ','.join([x for x in [iter_name, lang1, lang2] if x is not None]) + ('_back' if back else '')
+        # logger.info("Creating new training %s iterator ..." % key)
+        if lang2 is None:
+            dataset = self.data['mono'][lang1]['train']
+        elif back:
+            dataset = self.data['back'][(lang1, lang2)]
+        else:
+            k = (lang1, lang2) if lang1 < lang2 else (lang2, lang1)
+            dataset = self.data['para'][k]['train']
+        iterator = dataset.get_iterator(shuffle=True, group_by_size=self.params.group_by_size)()
+        self.iterators[key] = iterator
+        return iterator
+
+    def get_batch(self, iter_name, lang1, lang2, back=False):
+        """
+        Return a batch of sentences from a dataset.
+        """
+        assert back is False or lang2 is not None
+        assert lang1 in self.params.langs
+        assert lang2 is None or lang2 in self.params.langs
+        key = ','.join([x for x in [iter_name, lang1, lang2] if x is not None]) + ('_back' if back else '')
+        iterator = self.iterators.get(key, None)
+        if iterator is None:
+            iterator = self.get_iterator(iter_name, lang1, lang2, back)
+        try:
+            batch = next(iterator)
+        except StopIteration:
+            iterator = self.get_iterator(iter_name, lang1, lang2, back)
+            batch = next(iterator)
+        return batch if (lang2 is None or lang1 < lang2 or back) else batch[::-1]
+
+
+def main(params):
+    check_all_data_params(params)
+    data = load_data(params)
+    noiseModel = NoiseModel(data, params)
+
+    # what's in bpe_end
+    noiseModel.init_bpe()
+
+    for lang in params.mono_directions:
+        noiseModel.test_noise(lang)
+    
+    #print(data)
+
+if __name__ == '__main__':
+    parser = get_parser()
+    params = parser.parse_args()
+    print(params)
+    main(params)
+
