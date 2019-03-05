@@ -116,8 +116,7 @@ class Transformer(torch.nn.Module):
         self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
                                 for l in self.languages]
 
-        self.noise_model = NoiseModel(data=self.data, langs=self.languages,
-                                      word_drop=0.1, word_shuffle=3)
+        self.noise_model = NoiseModel(data=self.data, params=data_params)
 
     def initialize_embeddings(self, embedding_file):
 
@@ -243,19 +242,17 @@ class Transformer(torch.nn.Module):
         print("tgt_m", tgt_m)
         return tgt_m
 
-    def lm_loss(self, src_batch):
+    def lm_loss(self, src_batch, lengths):
 
         # TODO: verify cross-entropy loss, implement more abstract version
         loss = 0
         for lang in range(self.n_langs):
 
-            #src_batch = next(self.train_iterators[lang])
+            corr_src_batch = self.noise_model.add_noise(src_batch, lengths, lang)
             src_mask = self.get_src_mask(src_batch)
             tgt_mask = self.get_tgt_mask(src_batch)
 
-            #corr_src_batch = self.noise_model(src_batch)
-
-            output_seq = self.forward(input_seq=src_batch,
+            output_seq = self.forward(input_seq=corr_src_batch,
                          prev_output=src_batch,
                          src_mask=src_mask,
                          tgt_mask=tgt_mask,
@@ -292,8 +289,9 @@ if __name__ == "__main__":
 
     # test lm_loss
     x = torch.ones(2, 5, dtype=torch.int64)
-    x[:, -2:] = model.pad_index
-    loss = model.lm_loss(x)
+    l = torch.ones(2, dtype=torch.int32)*5
+    #x[:, -2:] = model.pad_index
+    loss = model.lm_loss(x, l)
     print(loss)
 
     parser=get_parser()
