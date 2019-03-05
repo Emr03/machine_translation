@@ -1,14 +1,11 @@
 from .config import params
-
 from .encoder import *
 from .decoder import *
 from .sublayers import *
 from .noise_model import *
-import numpy as np
 from .data.loader import *
 from .data_loading import get_parser
 from .data.dataset import *
-from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
 from .pretrain_embeddings import *
 
 
@@ -240,7 +237,7 @@ class Transformer(torch.nn.Module):
         print("tgt_m", tgt_m)
         return tgt_m
 
-    def lm_loss(self, src_batch, lang):
+    def lm_loss(self, src_batch, lengths, lang):
 
         # TODO: verify cross-entropy loss, implement more abstract version
         loss = 0
@@ -267,32 +264,47 @@ class Transformer(torch.nn.Module):
             src_lan = i % 2
             tgt_lan = (i + 1) % 2
 
+    def get_batch(self, lang):
+
+        get_iterator = self.train_iterators[lang]
+        iterator = get_iterator()
+
+        batch, len = next(iterator)
+        print(batch, len)
+
+        return batch, len
 
 if __name__ == "__main__":
     # test transformer
-    x = torch.zeros(20, 5, dtype=torch.int64)
-    y = torch.zeros(20, 7, dtype=torch.int64)
-    tgt_m = np.tril(np.ones((1, 7, 7)), k=0).astype(np.uint8)
-    tgt_m = torch.from_numpy(tgt_m)
-
-    src_m = torch.zeros(20, 5).unsqueeze(-2).unsqueeze(-2)
     model = Transformer(n_langs=2)
-    out = model(input_seq=x, prev_output=y, src_mask=src_m, tgt_mask=tgt_m, src_lang=1, tgt_lang=0)
-    print(out.shape)
+
+    # x = torch.zeros(20, 5, dtype=torch.int64)
+    # y = torch.zeros(20, 7, dtype=torch.int64)
+    # tgt_m = np.tril(np.ones((1, 7, 7)), k=0).astype(np.uint8)
+    # tgt_m = torch.from_numpy(tgt_m)
+    #
+    # src_m = torch.zeros(20, 5).unsqueeze(-2).unsqueeze(-2)
+
+    # out = model(input_seq=x, prev_output=y, src_mask=src_m, tgt_mask=tgt_m, src_lang=1, tgt_lang=0)
+    # print(out.shape)
 
     # test lm_loss
-    x = torch.ones(2, 5, dtype=torch.int64)
-    x[:, -2:] = model.pad_index
-    loss = model.lm_loss(x, 1)
-    print(loss)
+    # x = torch.ones(2, 5, dtype=torch.int64)
+    # x[:, -2:] = model.pad_index
+    # loss = model.lm_loss(x, 1)
+    # print(loss)
 
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     model.load_data(data_params=data_params)
     print('loaded data')
+
     model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
     print("initialized embeddings")
-    # model.train_loop(train_iter=1)
-    # test noise model
-    model.noise_model
+
+    batch, len = model.get_batch(lang=0)
+    model.lm_loss(src_batch=batch, lengths=len, lang=0)
+    print(batch)
+    print(len)
+    
