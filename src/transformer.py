@@ -109,7 +109,7 @@ class Transformer(torch.nn.Module):
                                 for l in range(len(self.languages))]
 
         self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
-                              for l in self.languages]
+                              for l in range(len(self.languages))]
 
         self.noise_model = NoiseModel(data=self.data, params=data_params)
 
