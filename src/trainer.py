@@ -3,6 +3,9 @@ import torch.nn.functional as F
 import numpy as np
 from .transformer import Transformer
 from .noise_model import NoiseModel
+from .data_loading import get_parser
+from .data.dataset import *
+from .data.loader import *
 
 class Trainer:
 
@@ -82,7 +85,7 @@ class Trainer:
 
         batch_size = src_batch.size(0)
         if tgt_batch is None:
-            tgt_batch = torch.new_full(size=batch_size, fill_value=self.pad_index)
+            tgt_batch = src_batch.new_full(size=(batch_size, self.max_len), fill_value=self.pad_index)
             tgt_batch[:, 0] = self.bos_index
 
         tgt_mask = self.get_tgt_mask(tgt_batch)
@@ -109,9 +112,12 @@ class Trainer:
 
         batch_size = encoder_outputs.size(0)
         last_token = self.bos_index
-        hypotheses = torch.new_full(size=(batch_size, beam_size, self.max_len),
-                                     fill_value=self.pad_index)
-        hypotheses [:, :, 0] = self.bos_index
+        hypotheses = torch.zeros(size=(batch_size, beam_size, self.max_len), dtype=torch.int64)
+        hypotheses[:, :, 1:] = self.pad_index
+        hypotheses[:, :, 0] = self.bos_index
+
+        encoder_outputs = encoder_outputs.unsqueeze_(1).expand(-1, beam_size, -1, -1)
+        print("encoder_outputs", encoder_outputs)
 
         for sent in range(batch_size):
             prev_token = self.bos_index
@@ -120,15 +126,15 @@ class Trainer:
 
                 tgt_mask = self.get_tgt_mask(hypotheses[sent, :, :])
                 out = self.transformer.decode(prev_output=hypotheses[sent, :, :],
-                                        latent_seq=encoder_outputs,
-                                        src_mask=src_mask,
+                                        latent_seq=encoder_outputs[sent],
+                                        src_mask=src_mask[sent],
                                         tgt_mask=tgt_mask,
                                         tgt_lang=tgt_lang)
 
                 print("out", out)
 
                 scores = F.softmax(out, dim=-1)
-                scores.topk(beam_size, dim=-1, largest=True, sorted=True))
+                scores.topk(beam_size, dim=-1, largest=True, sorted=True)
                 print("scores", scores)
 
                 # use embedding layer of decoder to map output indices back to word embeddings
@@ -143,7 +149,7 @@ class Trainer:
 
     def get_batch(self, lang):
 
-        get_iterator = self.train_iterators[lang]
+        get_iterator = self.transformer.train_iterators[lang]
         iterator = get_iterator()
 
         batch, l = next(iterator)
@@ -159,7 +165,7 @@ if __name__ == "__main__":
     model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
     trainer = Trainer(model)
 
-    src_batch = trainer.get_batch(lang=0)
+    src_batch, l = trainer.get_batch(lang=0)
     trainer.translate(src_batch=src_batch,
                       tgt_batch=None,
                       src_lang=0,
