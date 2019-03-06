@@ -95,7 +95,10 @@ class NoiseModel():
         if self.params.word_dropout == 0:
             return x, l
         assert 0 < self.params.word_dropout < 1
-
+        
+        print(self.params.bos_index[lang_id])
+        print(l.size(0))
+        assert (x[0, 0] == self.params.bos_index[lang_id])
         assert (x[:, 0] == self.params.bos_index[lang_id]).sum() == l.size(0)
 
         # get boolean array for words to keep, with prob (1 - word_dropout)
