@@ -105,7 +105,9 @@ def set_parameters(params, dico):
     pad_index = dico.index(PAD_WORD)
     unk_index = dico.index(UNK_WORD)
     blank_index = dico.index(SPECIAL_WORD % 0)
-    bos_index = [dico.index(SPECIAL_WORD % (i + 1)) for i in range(params.n_langs)]
+    bos_index = dico.index(SPECIAL_WORD)
+    print("bos_index", bos_index)
+
     if hasattr(params, 'eos_index'):
         assert params.eos_index == eos_index
         assert params.pad_index == pad_index
@@ -134,6 +136,7 @@ def check_dictionaries(params, data):
     # check dictionaries indexes
     _SPECIAL_WORDS = ([EOS_WORD, PAD_WORD, UNK_WORD] +
                       [SPECIAL_WORD % i for i in range(SPECIAL_WORDS)])
+
     for i in range(1, params.n_langs):
         dico_i = data['dico'][params.langs[i]]
         assert all(dico_0.index(x) == dico_i.index(x) for x in _SPECIAL_WORDS)
@@ -141,7 +144,6 @@ def check_dictionaries(params, data):
     assert (not getattr(params, 'share_lang_emb', False) or
             all(data['dico'][params.langs[0]] == data['dico'][params.langs[i]]
                 for i in range(1, params.n_langs)))
-
 
 def load_para_data(params, data):
     """

@@ -96,10 +96,10 @@ class NoiseModel():
             return x, l
         assert 0 < self.params.word_dropout < 1
         
-        print(self.params.bos_index[lang_id])
+        print(self.params.bos_index)
         print(l.size(0))
-        assert (x[0, 0] == self.params.bos_index[lang_id])
-        assert (x[:, 0] == self.params.bos_index[lang_id]).sum() == l.size(0)
+        assert (x[0, 0] == self.params.bos_index)
+        assert (x[:, 0] == self.params.bos_index).sum() == l.size(0)
 
         # get boolean array for words to keep, with prob (1 - word_dropout)
         keep = np.random.rand(x.size(0), x.size(1) - 1) >= self.params.word_dropout
@@ -128,7 +128,7 @@ class NoiseModel():
                 new_s.append(words[np.random.randint(1, len(words))])
 
             new_s.append(self.params.eos_index)
-            assert len(new_s) >= 3 and new_s[0] == self.params.bos_index[lang_id] and new_s[-1] == self.params.eos_index
+            assert len(new_s) >= 3 and new_s[0] == self.params.bos_index and new_s[-1] == self.params.eos_index
             sentences.append(new_s)
             lengths.append(len(new_s))
 
@@ -149,7 +149,7 @@ class NoiseModel():
         assert 0 < self.params.word_blank < 1
 
         # define words to blank
-        bos_index = self.params.bos_index[lang_id]
+        bos_index = self.params.bos_index
         assert (x[:, 0] == bos_index).sum() == l.size(0)
         keep = np.random.rand(x.size(0), x.size(1) - 1) >= self.params.word_blank
         keep[:, 0] = 1  # do not blank the start sentence symbol
