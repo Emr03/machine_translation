@@ -74,6 +74,8 @@ class StackedDecoder(torch.nn.Module):
 
         return dec_outputs
 
+    def
+
 if __name__ == "__main__":
     from src.config import params
     # test decoder layer
