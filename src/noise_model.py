@@ -34,7 +34,7 @@ class NoiseModel():
             # indicate which tokens are at the end of a word
             self.bpe_end.append(np.array([not dico[i].endswith('@@') for i in range(len(dico))]))
 
-        print("bpe_end is " + str(self.bpe_end))
+        # print("bpe_end is " + str(self.bpe_end))
 
     def word_shuffle(self, x, l, lang_id):
         """
@@ -95,9 +95,7 @@ class NoiseModel():
         if self.params.word_dropout == 0:
             return x, l
         assert 0 < self.params.word_dropout < 1
-        
-        print(self.params.bos_index)
-        print(l.size(0))
+
         assert (x[0, 0] == self.params.bos_index)
         assert (x[:, 0] == self.params.bos_index).sum() == l.size(0)
 

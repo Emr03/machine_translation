@@ -96,7 +96,7 @@ class SelfAttention(torch.nn.Module):
             # set to -inf, where mask value is 0
             scores = scores.masked_fill(mask == 0, -1e9)
 
-        print("scores", scores[0, 0, :, :])
+        #print("scores", scores[0, 0, :, :])
         scores = torch.nn.functional.softmax(scores, dim=2)
 
         # matmul has shape = batch_size, heads, sentence_len, d_k
@@ -106,7 +106,7 @@ class SelfAttention(torch.nn.Module):
         attention = attention.contiguous().view(batch_size, -1, self.d_model)
         print(attention.shape)
         attention = self.W_o(attention)
-        print(attention.shape)
+        #print(attention.shape)
         return attention
 
 

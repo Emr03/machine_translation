@@ -89,13 +89,12 @@ class Transformer(torch.nn.Module):
                                   tgt_lang=tgt_lang)
 
         return self.linear_layers[tgt_lang](dec_outputs)
-        # TODO: move to inference
-        # return F.softmax(self.linear_layers[tgt_lang](dec_outputs), dim=-1)
 
     def load_data(self, data_params):
 
         all_data = load_data(data_params)
         self.data = all_data
+        self.data_params = data_params
         print(all_data)
 
         self.languages = list(all_data['dico'].keys())
@@ -125,8 +124,6 @@ class Transformer(torch.nn.Module):
 
         #self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
         #                      for l in range(len(self.languages))]
-
-        self.noise_model = NoiseModel(data=self.data, params=data_params)
 
     def initialize_embeddings(self, embedding_file):
 
@@ -210,84 +207,27 @@ class Transformer(torch.nn.Module):
                 "after lowercasing)." % (_found, self.vocab_size[i], i, _lower)
             )
 
-    def reconstruction_loss(self, orig, output):
+    def generate_pairs(self, src_lang, tgt_lang, max_len):
 
-        return F.cross_entropy(input=torch.flatten(output, 0, 1),
-                               target=torch.flatten(orig))
+        src_batch = self.get_batch(src_lang)
+        src_mask = self.get_src_mask(src_batch=src_batch)
 
-    def enc_loss(self, orig, output):
-        # TODO
-        pass
+        batch_size = src_batch.size(0)
+        prev_output = torch.new_full(size=(batch_size, max_len), fill_value=self.pad_index)
+        prev_output[:, 0] = self.bos_index
+        tgt_mask = self.get_tgt_mask(prev_output)
 
-    def generate_pairs(self):
-        # TODO
-        pass
-
-    def beam_search(self):
-        # TODO
-        pass
+        translations = self.forward(input_seq=src_batch,
+                     prev_output=prev_output,
+                     src_mask=src_mask,
+                     tgt_mask=tgt_mask,
+                     src_lang=src_lang,
+                     tgt_lang=tgt_lang)
 
     def label_smoothing(self):
         # TODO
         pass
 
-    def get_src_mask(self, src_batch):
-        mask = torch.ones_like(src_batch)
-        mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
-        #print("mask", mask)
-        return mask
-
-    def get_tgt_mask(self, tgt_batch):
-
-        batch_size, sent_len = tgt_batch.shape
-
-        # hide future words
-        tgt_m = np.tril(np.ones((batch_size, sent_len, sent_len)), k=0).astype(np.uint8)
-        #print("tgt_m", tgt_m)
-
-        tgt_m = torch.from_numpy(tgt_m)
-
-        # hide padding
-        tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.pad_index, 0).unsqueeze_(1)
-        #print("tgt_m", tgt_m)
-        return tgt_m
-
-    def lm_loss(self, src_batch, lengths, lang):
-
-        # TODO: verify cross-entropy loss, implement more abstract version
-        print("src_batch", src_batch)
-
-        tgt_mask = self.get_tgt_mask(src_batch)
-
-        corr_src_batch, new_len = self.noise_model.add_noise(src_batch, lengths, lang)
-        src_mask = self.get_src_mask(corr_src_batch)
-
-        output_seq = self.forward(input_seq=corr_src_batch,
-                                  prev_output=src_batch,
-                                  src_mask=src_mask,
-                                  tgt_mask=tgt_mask,
-                                  src_lang=lang,
-                                  tgt_lang=lang)
-
-        loss = self.reconstruction_loss(output=output_seq, orig=src_batch)
-
-        return loss
-
-    def train_loop(self, train_iter):
-
-        for i in range(train_iter):
-            src_lan = i % 2
-            tgt_lan = (i + 1) % 2
-
-    def get_batch(self, lang):
-
-        get_iterator = self.train_iterators[lang]
-        iterator = get_iterator()
-
-        batch, l = next(iterator)
-        print(batch, l)
-        batch = batch.transpose_(0, 1)
-        return batch, l
 
 if __name__ == "__main__":
     # test transformer
