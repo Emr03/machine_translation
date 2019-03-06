@@ -27,7 +27,7 @@ class EncoderLayer(torch.nn.Module):
 
 class StackedEncoder(torch.nn.Module):
 
-    def __init__(self, n_layers, params, n_langs, is_shared_emb=True):
+    def __init__(self, n_layers, params, vocab_size, n_langs, is_shared_emb=True):
         """
 
         :param n_layers:
@@ -35,17 +35,17 @@ class StackedEncoder(torch.nn.Module):
         :param lang_ids: list of language ids supported by embedding layers
         """
         super(StackedEncoder, self).__init__()
-        self.vocab_size = params["vocab_size"]
+        self.vocab_size = vocab_size
         self.d_model = params["d_model"]
         self.n_langs = n_langs
 
-        embd_layer = torch.nn.Embedding(self.vocab_size, self.d_model)
+        embd_layer = torch.nn.Embedding(self.vocab_size[0], self.d_model)
 
         if is_shared_emb:
             self.embedding_layers = [embd_layer for _ in range(self.n_langs)]
 
         else:
-            self.embedding_layers = [torch.nn.Embedding(self.vocab_size, self.d_model) for _ in range(self.n_langs)]
+            self.embedding_layers = [torch.nn.Embedding(self.vocab_size[l], self.d_model) for l in range(self.n_langs)]
 
         # freeze embedding layers
         for l in self.embedding_layers:
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     # test encoder stack
     x = torch.zeros(20, 5, dtype=torch.int64)
-    enc = StackedEncoder(n_layers=6, params=params, n_langs=2)
+    enc = StackedEncoder(n_layers=6, vocab_size=[90], params=params, n_langs=2)
     out = enc(x, m, 0)
     print(out.shape)
 

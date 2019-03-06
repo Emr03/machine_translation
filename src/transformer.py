@@ -10,7 +10,7 @@ from .pretrain_embeddings import *
 
 
 class Transformer(torch.nn.Module):
-    def __init__(self, n_langs, is_shared_emb=True):
+    def __init__(self, data_params, embd_file,  n_langs, is_shared_emb=True):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -19,11 +19,10 @@ class Transformer(torch.nn.Module):
         assert (type(is_shared_emb) is bool)
 
         self.d_model = params["d_model"]
-        self.vocab_size = params["vocab_size"]
         self.n_layers = params["n_layers"]
         self.dff = params["dff"]
         self.d_k = params["d_k"]
-        self.n_langs = n_langs
+
         self.is_shared_emb = is_shared_emb
 
         # will be set in load_data
@@ -32,24 +31,32 @@ class Transformer(torch.nn.Module):
         self.eos_index = None
         self.pad_index = None
         self.noise_model = None
+        self.languages = None
+        self.dictionaries = None
+        self.vocab_size = None
+
+        self.load_data(data_params)
+        self.n_langs = len(self.languages)
 
         self.encoder = StackedEncoder(n_layers=self.n_layers,
                                       params=params,
                                       n_langs=n_langs,
+                                      vocab_size=self.vocab_size,
                                       is_shared_emb=is_shared_emb)
 
         self.decoder = StackedDecoder(n_layers=self.n_layers,
                                       params=params,
                                       n_langs=n_langs,
+                                      vocab_size=self.vocab_size,
                                       is_shared_emb=is_shared_emb)
 
-        linear = torch.nn.Linear(self.d_model, self.vocab_size)
+        linear = torch.nn.Linear(self.d_model, self.vocab_size[0])
 
         if self.is_shared_emb:
             self.linear_layers = [linear for _ in range(self.n_langs)]
 
         else:
-            self.linear_layers = [torch.nn.Linear(self.d_model, self.vocab_size) for _ in range(self.n_langs)]
+            self.linear_layers = [torch.nn.Linear(self.d_model, self.vocab_size[l]) for l in range(self.n_langs)]
 
         def init_weights(m):
 
@@ -61,6 +68,7 @@ class Transformer(torch.nn.Module):
 
         self.encoder.apply(init_weights)
         self.decoder.apply(init_weights)
+        self.initialize_embeddings(embedding_file=embd_file)
 
     def encode(self, input_seq, src_mask, src_lang):
 
@@ -99,6 +107,7 @@ class Transformer(torch.nn.Module):
         #                        all_data['mono'][self.languages[1]]['valid']]
 
         self.dictionaries = all_data['dico']
+        self.vocab_size = [len(self.dictionaries[l].word2id) for l in self.languages]
 
         # by construction, special indices are the same for all languages
         self.pad_index = data_params.pad_index
@@ -161,7 +170,7 @@ class Transformer(torch.nn.Module):
             to_update.append(self.linear_layers[i].weight.data)
 
             # for every word in that language
-            for word_id in range(self.vocab_size):
+            for word_id in range(self.vocab_size[i]):
                 word = dico[word_id]
 
                 # if word is in the dictionary of that language
