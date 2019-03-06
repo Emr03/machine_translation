@@ -40,13 +40,13 @@ class Transformer(torch.nn.Module):
 
         self.encoder = StackedEncoder(n_layers=self.n_layers,
                                       params=params,
-                                      n_langs=n_langs,
+                                      n_langs=self.n_langs,
                                       vocab_size=self.vocab_size,
                                       is_shared_emb=is_shared_emb)
 
         self.decoder = StackedDecoder(n_layers=self.n_layers,
                                       params=params,
-                                      n_langs=n_langs,
+                                      n_langs=self.n_langs,
                                       vocab_size=self.vocab_size,
                                       is_shared_emb=is_shared_emb)
 
@@ -201,7 +201,7 @@ class Transformer(torch.nn.Module):
             _lower = lower[0 if self.is_shared_emb  else i]
             logger.info(
                 "Initialized %i / %i word embeddings for \"%s\" (including %i "
-                "after lowercasing)." % (_found, self.vocab_size, i, _lower)
+                "after lowercasing)." % (_found, self.vocab_size[i], i, _lower)
             )
 
     def reconstruction_loss(self, orig, output):
