@@ -11,7 +11,7 @@ import torch
 
 from .utils import create_word_masks
 from .dataset import MonolingualDataset, ParallelDataset
-from .dictionary import EOS_WORD, PAD_WORD, UNK_WORD, SPECIAL_WORD, SPECIAL_WORDS
+from .dictionary import BOS_WORD, EOS_WORD, PAD_WORD, UNK_WORD, SPECIAL_WORD, SPECIAL_WORDS
 
 
 logger = getLogger()
@@ -105,7 +105,7 @@ def set_parameters(params, dico):
     pad_index = dico.index(PAD_WORD)
     unk_index = dico.index(UNK_WORD)
     blank_index = dico.index(SPECIAL_WORD % 0)
-    bos_index = dico.index(SPECIAL_WORD)
+    bos_index = dico.index(BOS_WORD)
     print("bos_index", bos_index)
 
     if hasattr(params, 'eos_index'):

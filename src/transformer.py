@@ -114,6 +114,12 @@ class Transformer(torch.nn.Module):
         self.eos_index = data_params.eos_index
         self.bos_index = data_params.bos_index
 
+        print("pad_index", self.pad_index)
+        print("eos_index", self.eos_index)
+        print("bos_index", self.bos_index)
+        print("unk_index", data_params.unk_index)
+        print("blank_index", data_params.blank_index)
+
         self.train_iterators = [self.mono_data_train[l].get_iterator(shuffle=True, group_by_size=True)
                                 for l in range(len(self.languages))]
 
