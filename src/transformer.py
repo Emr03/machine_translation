@@ -10,7 +10,7 @@ from .pretrain_embeddings import *
 
 
 class Transformer(torch.nn.Module):
-    def __init__(self, data_params, embd_file,  n_langs, is_shared_emb=True):
+    def __init__(self, data_params, embd_file, is_shared_emb=True):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -285,7 +285,6 @@ class Transformer(torch.nn.Module):
 
 if __name__ == "__main__":
     # test transformer
-    model = Transformer(n_langs=2)
 
     # x = torch.zeros(20, 5, dtype=torch.int64)
     # y = torch.zeros(20, 7, dtype=torch.int64)
@@ -306,11 +305,7 @@ if __name__ == "__main__":
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
-    model.load_data(data_params=data_params)
-    print('loaded data')
-
-    model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
-    print("initialized embeddings")
+    model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
 
     batch, l = model.get_batch(lang=0)
     print("batch", batch)
