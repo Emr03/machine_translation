@@ -117,6 +117,7 @@ class NoiseModel():
 
             # randomly drop words from the input
             # use word_idx to index keep, to drop entire words
+            new_s = [w for j, w in enumerate(words) if keep[i, word_idx[i, j]]]
             new_s = [w for j, w in enumerate(words) if keep[i, word_idx[j, i]]]
 
             # we need to have at least one word in the sentence (more than the start / end sentence symbols)
@@ -161,6 +162,7 @@ class NoiseModel():
             assert x[i, l[i] - 1] == self.params.eos_index
             words = x[i, :l[i] - 1].tolist()
             # randomly blank words from the input
+            new_s = [w if keep[i, word_idx[i, j]] else self.params.blank_index for j, w in enumerate(words)]
             new_s = [w if keep[i, word_idx[j, i]] else self.params.blank_index for j, w in enumerate(words)]
             new_s.append(self.params.eos_index)
             assert len(new_s) == l[i] and new_s[0] == bos_index and new_s[-1] == self.params.eos_index
