@@ -58,8 +58,8 @@ class NoiseModel():
 
         # count the number of non-end of words,
         # the number in each cell indicates the word (order) index that this token belongs to
-        word_idx = bpe_end[:, ::-1].cumsum(0)[:, ::-1]
-        word_idx = word_idx.max(0)[None, :] - word_idx
+        word_idx = bpe_end[:, ::-1].cumsum(1)[:, ::-1]
+        word_idx = word_idx.max(1)[None, :] - word_idx
 
         assert self.params.word_shuffle > 1
         x2 = x.clone()#
@@ -100,12 +100,12 @@ class NoiseModel():
 
         # get boolean array for words to keep, with prob (1 - word_dropout)
         keep = np.random.rand(x.size(0), x.size(1) - 1) >= self.params.word_dropout
-        keep[0] = 1  # do not drop the start sentence symbol
+        keep[:, 0] = 1  # do not drop the start sentence symbol
 
         # index tokens based on which word they belong to
         bpe_end = self.bpe_end[lang_id][x]
-        word_idx = bpe_end[:, ::-1].cumsum(0)[:, ::-1]
-        word_idx = word_idx.max(0)[None, :] - word_idx
+        word_idx = bpe_end[:, ::-1].cumsum(1)[:, ::-1]
+        word_idx = word_idx.max(1)[None, :] - word_idx
 
         sentences = []
         lengths = []
@@ -118,7 +118,6 @@ class NoiseModel():
             # randomly drop words from the input
             # use word_idx to index keep, to drop entire words
             new_s = [w for j, w in enumerate(words) if keep[i, word_idx[i, j]]]
-            new_s = [w for j, w in enumerate(words) if keep[i, word_idx[j, i]]]
 
             # we need to have at least one word in the sentence (more than the start / end sentence symbols)
             if len(new_s) == 1:
@@ -150,7 +149,7 @@ class NoiseModel():
         bos_index = self.params.bos_index[lang_id]
         assert (x[:, 0] == bos_index).sum() == l.size(0)
         keep = np.random.rand(x.size(0), x.size(1) - 1) >= self.params.word_blank
-        keep[0] = 1  # do not blank the start sentence symbol
+        keep[:, 0] = 1  # do not blank the start sentence symbol
 
         # be sure to blank entire words
         bpe_end = self.bpe_end[lang_id][x]
@@ -163,7 +162,6 @@ class NoiseModel():
             words = x[i, :l[i] - 1].tolist()
             # randomly blank words from the input
             new_s = [w if keep[i, word_idx[i, j]] else self.params.blank_index for j, w in enumerate(words)]
-            new_s = [w if keep[i, word_idx[j, i]] else self.params.blank_index for j, w in enumerate(words)]
             new_s.append(self.params.eos_index)
             assert len(new_s) == l[i] and new_s[0] == bos_index and new_s[-1] == self.params.eos_index
             sentences.append(new_s)
@@ -191,6 +189,7 @@ class NoiseModel():
         lang_id = self.params.lang2id[lang]
         sent1, len1 = self.get_batch('encdec', lang, None)
         sent1 = sent1.transpose_(0, 1)
+        print(sent1.shape)
         print("sent1 before noise is ")
         print(sent1)
         print("len1 before noise is ")
