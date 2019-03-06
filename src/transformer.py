@@ -95,8 +95,8 @@ class Transformer(torch.nn.Module):
         self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
                                 all_data['mono'][self.languages[1]]['train']]
 
-        self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
-                                all_data['mono'][self.languages[1]]['valid']]
+        #self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
+        #                        all_data['mono'][self.languages[1]]['valid']]
 
         self.dictionaries = all_data['dico']
 
@@ -108,8 +108,8 @@ class Transformer(torch.nn.Module):
         self.train_iterators = [self.mono_data_train[l].get_iterator(shuffle=True, group_by_size=True)
                                 for l in range(len(self.languages))]
 
-        self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
-                              for l in range(len(self.languages))]
+        #self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
+        #                      for l in range(len(self.languages))]
 
         self.noise_model = NoiseModel(data=self.data, params=data_params)
 
@@ -219,7 +219,7 @@ class Transformer(torch.nn.Module):
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
         mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
-        print("mask", mask)
+        #print("mask", mask)
         return mask
 
     def get_tgt_mask(self, tgt_batch):
@@ -228,23 +228,23 @@ class Transformer(torch.nn.Module):
 
         # hide future words
         tgt_m = np.tril(np.ones((batch_size, sent_len, sent_len)), k=0).astype(np.uint8)
-        print("tgt_m", tgt_m)
+        #print("tgt_m", tgt_m)
 
         tgt_m = torch.from_numpy(tgt_m)
 
         # hide padding
         tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.pad_index, 0).unsqueeze_(1)
-        print("tgt_m", tgt_m)
+        #print("tgt_m", tgt_m)
         return tgt_m
 
     def lm_loss(self, src_batch, lengths, lang):
 
         # TODO: verify cross-entropy loss, implement more abstract version
-        loss = 0
+        print("src_batch", src_batch)
 
         tgt_mask = self.get_tgt_mask(src_batch)
 
-        corr_src_batch = self.noise_model.add_noise(src_batch, lengths, lang)
+        corr_src_batch, new_len = self.noise_model.add_noise(src_batch, lengths, lang)
         src_mask = self.get_src_mask(corr_src_batch)
 
         output_seq = self.forward(input_seq=corr_src_batch,
@@ -254,7 +254,7 @@ class Transformer(torch.nn.Module):
                                   src_lang=lang,
                                   tgt_lang=lang)
 
-        loss += self.reconstruction_loss(output=output_seq, orig=src_batch)
+        loss = self.reconstruction_loss(output=output_seq, orig=src_batch)
 
         return loss
 
@@ -269,10 +269,10 @@ class Transformer(torch.nn.Module):
         get_iterator = self.train_iterators[lang]
         iterator = get_iterator()
 
-        batch, len = next(iterator)
-        print(batch, len)
-
-        return batch, len
+        batch, l = next(iterator)
+        print(batch, l)
+        batch = batch.transpose_(0, 1)
+        return batch, l
 
 if __name__ == "__main__":
     # test transformer
@@ -303,7 +303,8 @@ if __name__ == "__main__":
     model.initialize_embeddings(embedding_file="corpora/mono/all.en-fr.60000.vec")
     print("initialized embeddings")
 
-    batch, len = model.get_batch(lang=0)
-    model.lm_loss(src_batch=batch, lengths=len, lang=0)
-    print(batch)
-    print(len)
+    batch, l = model.get_batch(lang=0)
+    print("batch", batch)
+    print("l", l)
+    loss = model.lm_loss(src_batch=batch, lengths=l, lang=0)
+    print(loss)
