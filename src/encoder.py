@@ -52,7 +52,7 @@ class StackedEncoder(torch.nn.Module):
             l.weight.requires_grad = False
 
         self.pos_enc = PositionalEncoding(params)
-        self.encoder_layers = [EncoderLayer(params) for _ in range(n_layers)]
+        self.encoder_layers = torch.nn.ModuleList([EncoderLayer(params) for _ in range(n_layers)])
         self.emb_scale = np.sqrt(self.d_model)
 
     def forward(self, input_seq, src_mask, lang_id):

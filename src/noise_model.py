@@ -59,7 +59,7 @@ class NoiseModel():
         # count the number of non-end of words,
         # the number in each cell indicates the word (order) index that this token belongs to
         word_idx = bpe_end[:, ::-1].cumsum(1)[:, ::-1]
-        word_idx = word_idx.max(1)[None, :] - word_idx
+        word_idx = word_idx.max(1)[:, None] - word_idx
 
         assert self.params.word_shuffle > 1
         x2 = x.clone()#
@@ -106,7 +106,7 @@ class NoiseModel():
         # index tokens based on which word they belong to
         bpe_end = self.bpe_end[lang_id][x]
         word_idx = bpe_end[:, ::-1].cumsum(1)[:, ::-1]
-        word_idx = word_idx.max(1)[None, :] - word_idx
+        word_idx = word_idx.max(1)[:, None] - word_idx
 
         sentences = []
         lengths = []
@@ -154,8 +154,8 @@ class NoiseModel():
 
         # be sure to blank entire words
         bpe_end = self.bpe_end[lang_id][x]
-        word_idx = bpe_end[:, ::-1].cumsum(0)[:, ::-1]
-        word_idx = word_idx.max(0)[None, :] - word_idx
+        word_idx = bpe_end[:, ::-1].cumsum(1)[:, ::-1]
+        word_idx = word_idx.max(1)[:, None] - word_idx
 
         sentences = []
         for i in range(l.size(0)):

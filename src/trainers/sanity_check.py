@@ -16,8 +16,8 @@ class LanguageModeling(Trainer):
     def reconstruction_loss(self, src_batch, lengths, lang, noise=True):
 
         tgt_mask = self.get_tgt_mask(src_batch)
-        tgt_batch = torch.copy_(src_batch)
-
+        tgt_batch = src_batch.clone()
+        print(src_batch.shape, lengths)
         if noise:
             src_batch, new_len = self.noise_model.add_noise(src_batch, lengths, lang)
 
