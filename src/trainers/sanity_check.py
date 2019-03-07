@@ -5,7 +5,7 @@ from src.noise_model import NoiseModel
 from src.data_loading import get_parser
 from src.data.dataset import *
 from src.data.loader import *
-from .trainer import Trainer
+from .basic_trainer import Trainer
 
 class LanguageModeling(Trainer):
 
