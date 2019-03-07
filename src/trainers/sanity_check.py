@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import torch.cuda
 import numpy as np
 from src.transformer import Transformer
 from src.noise_model import NoiseModel
@@ -79,17 +80,23 @@ class LanguageModeling(Trainer):
 
     def train(self, n_iter):
 
-        if cuda.is_available():
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
             self.transformer.cuda()
+
+        else:
+            device = torch.device('cpu')
 
         opt = torch.optim.Adam(self.transformer.parameters(), lr=0.0001,  betas=(0.9, 0.98), eps=1e-9)
         lang = 0
         for i in range(n_iter):
             opt.zero_grad()
             batch, l = self.get_train_batch(lang)
+            batch.to(device)
+            l.to(device)
             loss = self.reconstruction_loss(src_batch=batch, lengths=l, lang=lang)
 
-            if i % 50 == 0
+            if i % 50 == 0:
                 print("iter ", i, "loss: ", loss)
 
             loss.backward()

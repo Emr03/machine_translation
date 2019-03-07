@@ -98,7 +98,7 @@ class Transformer(torch.nn.Module):
         print(all_data)
 
         self.languages = list(all_data['dico'].keys())
-        self.id2lang = {i: lang] for i, lang in enumerate(self.languages)}
+        self.id2lang = {i: lang for i, lang in enumerate(self.languages)}
 
         self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
                                 all_data['mono'][self.languages[1]]['train']]
