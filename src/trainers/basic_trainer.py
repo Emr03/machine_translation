@@ -57,6 +57,8 @@ class Trainer(ABC):
         batch = batch.transpose_(0, 1)
         return batch, l
     
-    
-
-
+    def save_model(self, path):
+        torch.save(self.transformer.state_dict(), path)
+        
+    def load_model(self, path):
+        self.transformer.load_state_dict(torch.load(path))

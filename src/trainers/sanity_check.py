@@ -32,13 +32,50 @@ class LanguageModeling(Trainer):
 
         return F.cross_entropy(input=torch.flatten(output_seq, 0, 1),
                                target=torch.flatten(src_batch))
+    
+    def greedy_decoding(self, sent):
+
+        lang = 0
+        src_mask = self.get_src_mask(sent)
+        latent_code = self.transformer.encode(input_seq=sent,
+                                              src_mask=src_mask,
+                                              src_lang=lang)
+
+        prev_output = torch.ones(1, self.max_len, dtype=torch.int64)*self.pad_index
+        out = []
+        prev_output[:, 0] = self.bos_index
+        prev_token = self.bos_index
+        word_count = 0
+
+        while prev_token is not self.eos_index and word_count<self.max_len-1:
+            
+            word_count+=1
+            tgt_mask = np.ones((1, self.max_len))
+            tgt_mask = torch.from_numpy(tgt_mask)
+            tgt_mask = tgt_mask.masked_fill_(prev_output == self.pad_index, 0)
+            dec_logits = self.transformer.decode(prev_output=prev_output,
+                                        latent_seq=latent_code,
+                                        src_mask=src_mask,
+                                        tgt_mask=tgt_mask,
+                                        tgt_lang=lang)
+
+            scores = F.softmax(dec_logits, dim=-1)
+            max_score, index = torch.max(scores, -1)
+            print("index", index)
+            prev_output[:, word_count] = index[0, 0].item()
+            
+            word = self.data['dico']['en'][index[0, 0].item()]
+            out.append(word)
+            print(out)
+    
+        input = []
+        for i in range(sent.size(1)):
+            idx = sent[:, i]
+            input.append(self.data['dico']['en'][idx])
+
+        print("input ", input)    
 
     def train(self, n_iter):
-
-        print("transformer ", self.transformer)
-        print("transformer parameter list", next(self.transformer.parameters()))
-        print("encoder parameter list ", next(self.transformer.encoder.parameters()))
-        print("decoder parameter list ", next(self.transformer.decoder.parameters()))
 
         opt = torch.optim.Adam(self.transformer.parameters(), lr=0.0001)
         lang = 0
@@ -50,6 +87,15 @@ class LanguageModeling(Trainer):
             loss.backward()
             opt.step()
 
+    def test(self, n_tests):
+        self.transformer.eval()
+        lang=0
+        for i in range(n_tests):
+            batch, l = self.get_train_batch(0)
+            self.greedy_decoding(batch)
+            #loss = self.reconstruction_loss(src_batch=batch, lengths=l, lang=lang)
+           
+
 if __name__ == "__main__":
 
     parser = get_parser()
@@ -57,8 +103,10 @@ if __name__ == "__main__":
     check_all_data_params(data_params)
     model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
     trainer = LanguageModeling(model)
-    trainer.train(100)
-
+    #trainer.train(200)
+    #trainer.save_model("sanity_check.pth")
+    trainer.load_model("sanity_check.pth")
+    trainer.test(10) 
 
 
 
