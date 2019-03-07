@@ -53,7 +53,7 @@ class StackedDecoder(torch.nn.Module):
             l.weight.requires_grad = False
 
         self.pos_enc = PositionalEncoding(params)
-        self.decoder_layers = [DecoderLayer(params) for _ in range(n_layers)]
+        self.decoder_layers = torch.nn.ModuleList([DecoderLayer(params) for _ in range(n_layers)])
 
     def forward(self, dec_outputs, enc_outputs, src_mask, tgt_mask, lang_id):
         """
