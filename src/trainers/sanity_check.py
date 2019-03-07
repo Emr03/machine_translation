@@ -63,7 +63,7 @@ class LanguageModeling(Trainer):
             max_score, index = torch.max(scores, -1)
             print("index", index)
             prev_output[:, word_count] = index[0, 0].item()
-            
+            prev_token = prev_output[:, word_count].item()
             word = self.data['dico']['en'][index[0, 0].item()]
             out.append(word)
             print(out)
