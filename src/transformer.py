@@ -207,23 +207,6 @@ class Transformer(torch.nn.Module):
                 "after lowercasing)." % (_found, self.vocab_size[i], i, _lower)
             )
 
-    def generate_pairs(self, src_lang, tgt_lang, max_len):
-
-        src_batch = self.get_batch(src_lang)
-        src_mask = self.get_src_mask(src_batch=src_batch)
-
-        batch_size = src_batch.size(0)
-        prev_output = torch.new_full(size=(batch_size, max_len), fill_value=self.pad_index)
-        prev_output[:, 0] = self.bos_index
-        tgt_mask = self.get_tgt_mask(prev_output)
-
-        translations = self.forward(input_seq=src_batch,
-                     prev_output=prev_output,
-                     src_mask=src_mask,
-                     tgt_mask=tgt_mask,
-                     src_lang=src_lang,
-                     tgt_lang=tgt_lang)
-
     def label_smoothing(self):
         # TODO
         pass

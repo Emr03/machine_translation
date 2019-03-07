@@ -102,9 +102,9 @@ class SelfAttention(torch.nn.Module):
         # matmul has shape = batch_size, heads, sentence_len, d_k
         # for each attention head, for each position, we have an encoding of dimension d_k
         attention = torch.matmul(scores, V).transpose(1, 2)
-        print(attention.shape)
+        #print(attention.shape)
         attention = attention.contiguous().view(batch_size, -1, self.d_model)
-        print(attention.shape)
+        #print(attention.shape)
         attention = self.W_o(attention)
         #print(attention.shape)
         return attention

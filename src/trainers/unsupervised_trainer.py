@@ -153,7 +153,7 @@ class Trainer:
         iterator = get_iterator()
 
         batch, l = next(iterator)
-        print(batch, l)
+        # print(batch, l)
         batch = batch.transpose_(0, 1)
         return batch, l
 
