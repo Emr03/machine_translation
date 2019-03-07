@@ -35,6 +35,11 @@ class LanguageModeling(Trainer):
 
     def train(self, n_iter):
 
+        print("transformer ", self.transformer)
+        print("transformer parameter list", self.transformer.parameters())
+        print("encoder parameter list ", self.transformer.encoder.parameters())
+        print("decoder parameter list ", self.transformer.decoder.parameters())
+
         opt = torch.optim.Adam(self.transformer.parameters(), lr=0.0001)
         lang = 0
         for i in range(n_iter):
