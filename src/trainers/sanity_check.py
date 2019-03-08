@@ -29,7 +29,7 @@ class LanguageModeling(Trainer):
                                   src_lang=lang,
                                   tgt_lang=lang)
        
-        return self.compute_kl_div_loss(x=torch.flatten(output_seq, 0, 1), target=torch.flatten(src_batch, 0, 1), lang=lang)
+        return self.compute_kl_div_loss(x=output_seq, target=src_batch, lang=lang)
 
     def greedy_decoding(self, batch_dict, lang):
 
@@ -73,13 +73,13 @@ class LanguageModeling(Trainer):
 
         print("output", out)
         input = []
-        for i in range(sent.size(1)):
-            idx = sent[:, i]
+        for i in range(src_batch.size(1)):
+            idx = src_batch[:, i]
             input.append(self.data['dico'][self.id2lang[lang]][idx])
 
         print("input ", input)
 
-        loss = self.compute_kl_div_loss(x=torch.flatten(prev_output, 0, 1), target=torch.flatten(src_batch, 0, 1), lang=lang)
+        loss = self.compute_kl_div_loss(x=prev_output, target=src_batch, lang=lang)
 
         print("loss ", loss)
 

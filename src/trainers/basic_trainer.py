@@ -183,5 +183,11 @@ if __name__ == "__main__":
     print(x)
     print(target)
 
+    x = torch.flatten(x, 0, 1)
+    target = torch.flatten(target, 0, 1)
+
+    print(x)
+    print(target)
+
     loss = compute_kl_div_loss(x, target, lang=0)
     print("loss", loss)
