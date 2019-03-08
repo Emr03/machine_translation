@@ -23,6 +23,7 @@ class Trainer(ABC):
 
         self.data = transformer.data
         self.data_params = transformer.data_params
+        self.vocab_size = transformer.vocab_size
         self.noise_model = NoiseModel(data=self.data, params=self.data_params)
         self.max_len = 100
 
@@ -30,6 +31,33 @@ class Trainer(ABC):
         self.eos_index = transformer.eos_index
         self.bos_index = transformer.bos_index
         self.id2lang = transformer.id2lang
+
+        # label smoothing parameters
+        self.smoothing = 0.1
+        self.confidence = 1 - self.smoothing
+
+        self.kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
+
+    def compute_kl_div_loss(x, target, lang):
+
+        x = F.log_softmax(x, dim=-1)
+
+        # same device and dtype as x, requires_grad = false
+        smooth_target = torch.zeros_like(x)
+        smooth_target.fill_(self.smoothing / self.vocab_size[lang])
+        smooth_target.scatter_(dim=1, index=target.data, self.confidence)
+
+        # zero the pad_index for each vector of probabilities
+        smooth_target[:, self.pad_index] = 0
+
+        # find where the target word is a pad symbol, returns indices along dim 0
+        mask = torch.nonzero(target.data == self.padding_idx)
+
+        if mask.dim() > 0:
+            # fill the entries of pad symbols with 0 prob
+            smooth_target.index_fill_(0, mask.squeeze(), 0.0)
+
+        return self.kl_div_loss(x, smooth_target)
 
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
@@ -76,7 +104,7 @@ class Trainer(ABC):
 
         def iterator():
             for tgt_batch, tgt_l in src_iterator:
-                
+
                 tgt_batch.transpose_(0, 1)
                 if add_noise:
                     src_batch, src_l = self.noise_model.add_noise(tgt_batch, tgt_l, lang)
