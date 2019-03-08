@@ -86,14 +86,19 @@ class LanguageModeling(Trainer):
 
         else:
             device = torch.device('cpu')
-
+        
+        for param in self.transformer.parameters():
+            print(param.get_device())
+        
         opt = torch.optim.Adam(self.transformer.parameters(), lr=0.0001,  betas=(0.9, 0.98), eps=1e-9)
         lang = 0
         for i in range(n_iter):
             opt.zero_grad()
             batch, l = self.get_train_batch(lang)
-            batch.to(device)
-            l.to(device)
+            batch = batch.to(device)
+            print(batch.type())
+            l =l.to(device)
+            print(l.type())
             loss = self.reconstruction_loss(src_batch=batch, lengths=l, lang=lang)
 
             if i % 50 == 0:

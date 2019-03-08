@@ -24,7 +24,7 @@ class PositionalEncoding(torch.nn.Module):
         self.pos_enc[:, 1::2] = np.cos(self.position * div_term)
 
         # positional encoding is not a model parameter
-        self.register_buffer('pe', torch.Tensor(self.pos_enc))
+        self.register_buffer('pe', torch.Tensor(self.pos_enc).to(torch.device('cuda')))
         self.dropout = torch.nn.Dropout(params["dropout"])
 
     def forward(self, x):
@@ -35,8 +35,13 @@ class PositionalEncoding(torch.nn.Module):
         """
         len = x.shape[1]
         batch_size = x.shape[0]
-        t = self.pe[0:len, :]
-        return self.dropout(x + t)
+        t = self.pe[0:len, :].to(torch.device('cuda'))
+        print("device", t.get_device())
+        print("type", t.type())
+        print("type", x.type())
+        
+        #return self.dropout(x + t)
+        return x+t
 
     def visualize(self):
         # visualize the encoding
