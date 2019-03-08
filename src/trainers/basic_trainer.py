@@ -45,13 +45,13 @@ class Trainer(ABC):
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)
         smooth_target.fill_(self.smoothing / self.vocab_size[lang])
-        smooth_target.scatter_(dim=1, index=target.data.unsqueeze_(1), value=self.confidence)
+        smooth_target.scatter_(dim=1, index=target.data, value=self.confidence)
 
         # zero the pad_index for each vector of probabilities
         smooth_target[:, self.pad_index] = 0
 
         # find where the target word is a pad symbol, returns indices along dim 0
-        mask = torch.nonzero(target.data == self.pad_index)
+        mask = torch.nonzero(target.squeeze().data == self.pad_index)
 
         if mask.dim() > 0:
             # fill the entries of pad symbols with 0 prob
@@ -138,3 +138,46 @@ class Trainer(ABC):
 
     def load_model(self, path):
         self.transformer.load_state_dict(torch.load(path))
+
+if __name__ == "__main__":
+
+    # test kl_div_loss
+    def compute_kl_div_loss(x, target, lang):
+
+        smoothing = 0.1
+        vocab_size = 30
+        confidence = 1.0 - smoothing
+        pad_index = 3
+        kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
+
+
+        x = F.log_softmax(x, dim=-1)
+
+        # same device and dtype as x, requires_grad = false
+        smooth_target = torch.zeros_like(x)
+        smooth_target.fill_(smoothing / vocab_size)
+        smooth_target.scatter_(dim=1, index=target.data, value=confidence)
+
+        # zero the pad_index for each vector of probabilities
+        smooth_target[:, pad_index] = 0
+        print("smooth target", smooth_target)
+
+        # find where the target word is a pad symbol, returns indices along dim 0
+        mask = torch.nonzero(target.squeeze().data == pad_index)
+        print("mask", mask)
+
+        if mask.dim() > 0:
+            # fill the entries of pad symbols with 0 prob
+            smooth_target.index_fill_(0, mask.squeeze(), 0.0)
+
+        print("smooth target", smooth_target)
+        return kl_div_loss(x, smooth_target)
+
+    x = torch.rand(3, 5)
+    target = torch.tensor([[1], [2], [3]])
+
+    print(x)
+    print(target)
+
+    loss = compute_kl_div_loss(x, target, lang=0)
+    print("loss", loss)
