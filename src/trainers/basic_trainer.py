@@ -39,12 +39,30 @@ class Trainer(ABC):
         self.kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
 
     def compute_kl_div_loss(self, x, target, lang):
+        """
 
+        :param x: shape = batch_size, sent_len, vocab_size
+        :param target: shape = batch_size, sent_len, 1
+        :param lang:
+        :return:
+        """
+
+        # apply softmax on last dim, corresponding to words
         x = F.log_softmax(x, dim=-1)
 
+        # shape test
         print("shape test ")
-        print("x ", x.shape)
-        print("target ", target.shape)
+        print(x.shape)
+        print(target.shape)
+
+        # reshape to index word by word on dim 0
+        x = x.reshape(-1, x.size(-1))
+        target = target.reshape(-1, 1)
+
+        # shape test
+        print("shape test ")
+        print(x.shape)
+        print(target.shape)
 
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)
@@ -172,22 +190,25 @@ if __name__ == "__main__":
 
         if mask.dim() > 0:
             # fill the entries of pad symbols with 0 prob
-            smooth_target.index_fill_(0, mask.squeeze(), 0.0)
+            smooth_target.index_fill_(dim=0, index=mask.squeeze(), value=0.0)
 
         print("smooth target", smooth_target)
         return kl_div_loss(x, smooth_target)
 
-    x = torch.rand(3, 5)
-    target = torch.tensor([[1], [2], [3]])
+    x = torch.rand(3, 2, 5)
+    target = torch.tensor([[[1], [1]], [[2], [2]], [[3], [3]]])
 
     print(x)
     print(target)
 
-    x = torch.flatten(x, 0, 1)
-    target = torch.flatten(target, 0, 1)
+    x = x.reshape(-1, 5)
+    target = target.reshape(-1, 1)
 
     print(x)
     print(target)
+
+    print(x.shape)
+    print(target.shape)
 
     loss = compute_kl_div_loss(x, target, lang=0)
     print("loss", loss)
