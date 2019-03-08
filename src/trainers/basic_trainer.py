@@ -50,19 +50,9 @@ class Trainer(ABC):
         # apply softmax on last dim, corresponding to words
         x = F.log_softmax(x, dim=-1)
 
-        # shape test
-        print("shape test ")
-        print(x.shape)
-        print(target.shape)
-
         # reshape to index word by word on dim 0
         x = x.reshape(-1, x.size(-1))
         target = target.reshape(-1, 1)
-
-        # shape test
-        print("shape test ")
-        print(x.shape)
-        print(target.shape)
 
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)

@@ -1,8 +1,8 @@
 import torch
-from data.dataset import *
-from data.loader import *
-from data_loading import get_parser
-from data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
+from .data.dataset import *
+from .data.loader import *
+from .data_loading import get_parser
+from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
 
 # TODO: switch to new batch shape
 
