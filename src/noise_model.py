@@ -1,8 +1,8 @@
 import torch
-from .data.dataset import *
-from .data.loader import *
-from .data_loading import get_parser
-from .data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
+from data.dataset import *
+from data.loader import *
+from data_loading import get_parser
+from data.dictionary import PAD_WORD, EOS_WORD, BOS_WORD
 
 # TODO: switch to new batch shape
 
@@ -54,12 +54,22 @@ class NoiseModel():
 
         # be sure to shuffle entire words
         # get the bpe_end boolean indiators from indices in batch x
+        # print("self.bpe_end is ")
+        # print(self.bpe_end)
+        # print ("lang_id is " + str(lang_id))
+        # print("x is " + str(x))
         bpe_end = self.bpe_end[lang_id][x]
+        # print("bpe end is")
+        # print(bpe_end)
 
         # count the number of non-end of words,
         # the number in each cell indicates the word (order) index that this token belongs to
         word_idx = bpe_end[:, ::-1].cumsum(1)[:, ::-1]
+        # print("word_idx is ")
+        # print(word_idx)
         word_idx = word_idx.max(1)[:, None] - word_idx
+        # print("word_idx is ")
+        # print(word_idx)
 
         assert self.params.word_shuffle > 1
         x2 = x.clone()#
@@ -247,6 +257,7 @@ def main(params):
 
     # what's in bpe_end
     noiseModel.init_bpe()
+
 
     for lang in params.langs:
         noiseModel.test_noise(lang)
