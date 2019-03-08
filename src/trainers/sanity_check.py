@@ -28,9 +28,8 @@ class LanguageModeling(Trainer):
                                   tgt_mask=tgt_mask,
                                   src_lang=lang,
                                   tgt_lang=lang)
-
-        return self.compute_kl_div_loss(x=torch.flatten(output_seq, 0, 1),
-                               target=torch.flatten(src_batch, 0, 1))
+       
+        return self.compute_kl_div_loss(x=torch.flatten(output_seq, 0, 1), target=torch.flatten(src_batch, 0, 1), lang=lang)
 
     def greedy_decoding(self, batch_dict, lang):
 
@@ -80,8 +79,7 @@ class LanguageModeling(Trainer):
 
         print("input ", input)
 
-        loss = self.compute_kl_div_loss(x=torch.flatten(prev_output, 0, 1),
-                               target=torch.flatten(src_batch, 0, 1))
+        loss = self.compute_kl_div_loss(x=torch.flatten(prev_output, 0, 1), target=torch.flatten(src_batch, 0, 1), lang=lang)
 
         print("loss ", loss)
 
@@ -97,7 +95,7 @@ class LanguageModeling(Trainer):
 
         for i in range(n_iter):
             opt.zero_grad()
-            batch_dict = next(train_iterator
+            batch_dict = next(train_iterator)
 
             loss = self.reconstruction_loss(batch_dict, lang=lang)
 
@@ -114,8 +112,7 @@ class LanguageModeling(Trainer):
         train_iterator = get_iterator()
         for i in range(n_tests):
             batch_dict = next(train_iterator)
-            for j in range(batch_dict["src_batch"].size(0))
-                self.greedy_decoding(batch_dict, lang)
+            self.greedy_decoding(batch_dict, lang)
 
 if __name__ == "__main__":
 
