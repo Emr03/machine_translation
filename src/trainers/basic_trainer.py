@@ -43,9 +43,9 @@ class Trainer(ABC):
         x = F.log_softmax(x, dim=-1)
 
         print("shape test ")
-        print("x ", x.shape())
-        print("target ", target.shape())
-        
+        print("x ", x.shape)
+        print("target ", target.shape)
+
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)
         smooth_target.fill_(self.smoothing / self.vocab_size[lang])
