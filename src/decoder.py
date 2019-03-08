@@ -1,4 +1,5 @@
 import torch
+import math
 import numpy as np
 from .sublayers import *
 
@@ -39,14 +40,15 @@ class StackedDecoder(torch.nn.Module):
         self.d_model = params["d_model"]
         self.vocab_size = vocab_size
         self.n_langs = n_langs
-
+        emb_scale = torch.tensor([math.sqrt(self.d_model)])
+        self.register_buffer('emb_scale', emb_scale)
         embd_layer = torch.nn.Embedding(self.vocab_size[0], self.d_model)
 
         if is_shared_emb:
-            self.embedding_layers = [embd_layer for _ in range(self.n_langs)]
+            self.embedding_layers = torch.nn.ModuleList([embd_layer for _ in range(self.n_langs)])
 
         else:
-            self.embedding_layers = [torch.nn.Embedding(self.vocab_size[l], self.d_model) for l in range(self.n_langs)]
+            self.embedding_layers = torch.nn.ModuleList([torch.nn.Embedding(self.vocab_size[l], self.d_model) for l in range(self.n_langs)])
 
         # freeze embedding layers
         for l in self.embedding_layers:
@@ -64,7 +66,7 @@ class StackedDecoder(torch.nn.Module):
         :param mask:
         :return:
         """
-        dec_outputs = self.embedding_layers[lang_id](dec_outputs)
+        dec_outputs = self.emb_scale * self.embedding_layers[lang_id](dec_outputs)
         dec_outputs = self.pos_enc(dec_outputs)
         for layer in self.decoder_layers:
             dec_outputs = layer(dec_outputs=dec_outputs,

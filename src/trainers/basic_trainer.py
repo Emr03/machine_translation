@@ -31,9 +31,6 @@ class Trainer(ABC):
         self.bos_index = transformer.bos_index
         self.id2lang = transformer.id2lang
 
-        get_train_iterators = [self.transformer.train_iterators
-        iterator = get_iterator()
-
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
         mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
@@ -79,8 +76,10 @@ class Trainer(ABC):
 
         def iterator():
             for tgt_batch, tgt_l in src_iterator:
+                
+                tgt_batch.transpose_(0, 1)
                 if add_noise:
-                    src_batch, src_l = self.NoiseModel.add_noise(tgt_batch, tgt_l, lang)
+                    src_batch, src_l = self.noise_model.add_noise(tgt_batch, tgt_l, lang)
 
                 else:
                     src_batch = tgt_batch

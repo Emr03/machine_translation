@@ -29,7 +29,7 @@ class LanguageModeling(Trainer):
                                   tgt_lang=lang)
 
         return F.cross_entropy(input=torch.flatten(output_seq, 0, 1),
-                               target=torch.flatten(src_batch))
+                               target=torch.flatten(src_batch), ignore_index=self.pad_index)
 
     def greedy_decoding(self, sent, src_mask):
 
@@ -79,8 +79,8 @@ class LanguageModeling(Trainer):
 
     def train(self, n_iter):
 
-        # for param in self.transformer.parameters():
-        #     print(param.get_device())
+        for param in self.transformer.parameters():
+            print(param.get_device())
 
         lang = 0
         get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
@@ -89,7 +89,7 @@ class LanguageModeling(Trainer):
 
         for i in range(n_iter):
             opt.zero_grad()
-            batch_dict = next_train_iterator()
+            batch_dict = next(train_iterator)
 
             loss = self.reconstruction_loss(batch_dict, lang=lang)
 

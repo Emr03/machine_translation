@@ -53,10 +53,10 @@ class Transformer(torch.nn.Module):
         linear = torch.nn.Linear(self.d_model, self.vocab_size[0])
 
         if self.is_shared_emb:
-            self.linear_layers = [linear for _ in range(self.n_langs)]
+            self.linear_layers = torch.nn.ModuleList([linear for _ in range(self.n_langs)])
 
         else:
-            self.linear_layers = [torch.nn.Linear(self.d_model, self.vocab_size[l]) for l in range(self.n_langs)]
+            self.linear_layers = torch.nn.ModuleList([torch.nn.Linear(self.d_model, self.vocab_size[l]) for l in range(self.n_langs)])
 
         def init_weights(m):
 

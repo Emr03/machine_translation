@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import math
 from .sublayers import *
 
 class EncoderLayer(torch.nn.Module):
@@ -42,10 +43,10 @@ class StackedEncoder(torch.nn.Module):
         embd_layer = torch.nn.Embedding(self.vocab_size[0], self.d_model)
 
         if is_shared_emb:
-            self.embedding_layers = [embd_layer for _ in range(self.n_langs)]
+            self.embedding_layers = torch.nn.ModuleList([embd_layer for _ in range(self.n_langs)])
 
         else:
-            self.embedding_layers = [torch.nn.Embedding(self.vocab_size[l], self.d_model) for l in range(self.n_langs)]
+            self.embedding_layers = torch.nn.ModuleList([torch.nn.Embedding(self.vocab_size[l], self.d_model) for l in range(self.n_langs)])
 
         # freeze embedding layers
         for l in self.embedding_layers:
@@ -53,7 +54,8 @@ class StackedEncoder(torch.nn.Module):
 
         self.pos_enc = PositionalEncoding(params)
         self.encoder_layers = torch.nn.ModuleList([EncoderLayer(params) for _ in range(n_layers)])
-        self.emb_scale = np.sqrt(self.d_model)
+        emb_scale = torch.tensor([math.sqrt(self.d_model)])
+        self.register_buffer('emb_scale', emb_scale)
 
     def forward(self, input_seq, src_mask, lang_id):
 
