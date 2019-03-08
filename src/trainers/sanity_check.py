@@ -97,7 +97,7 @@ class LanguageModeling(Trainer):
 
         for i in range(n_iter):
             opt.zero_grad()
-            batch_dict = next_train_iterator()
+            batch_dict = next(train_iterator
 
             loss = self.reconstruction_loss(batch_dict, lang=lang)
 
@@ -113,7 +113,7 @@ class LanguageModeling(Trainer):
         get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
         train_iterator = get_iterator()
         for i in range(n_tests):
-            batch_dict = next_train_iterator()
+            batch_dict = next(train_iterator)
             for j in range(batch_dict["src_batch"].size(0))
                 self.greedy_decoding(batch_dict, lang)
 
@@ -126,5 +126,5 @@ if __name__ == "__main__":
     trainer = LanguageModeling(model)
     trainer.train(3000)
     trainer.save_model("sanity_check.pth")
-    trainer.load_model("sanity_check.pth")
-    trainer.test(10)
+    # trainer.load_model("sanity_check.pth")
+    # trainer.test(10)
