@@ -1,3 +1,4 @@
+
 import torch.nn.functional as F
 import torch.cuda
 import numpy as np
@@ -29,20 +30,23 @@ class LanguageModeling(Trainer):
                                   tgt_lang=lang)
 
         return F.cross_entropy(input=torch.flatten(output_seq, 0, 1),
-                               target=torch.flatten(src_batch), ignore_index=self.pad_index)
+                               target=torch.flatten(src_batch, 0, 1))
 
-    def greedy_decoding(self, sent, src_mask):
+    def greedy_decoding(self, batch_dict, lang):
 
-        # TODO: check
+        tgt_batch = batch_dict["tgt_batch"]
+        src_mask = batch_dict["src_mask"]
+        src_batch = batch_dict["src_batch"]
 
-        assert(sent.shape[0] == 1)
-        lang = 0
-        src_mask = self.get_src_mask(sent)
-        latent_code = self.transformer.encode(input_seq=sent,
+        assert(src_batch.shape[0] == 1)
+        assert(tgt_batch.shape[0] == 1)
+
+        latent_code = self.transformer.encode(input_seq=src_batch,
                                               src_mask=src_mask,
                                               src_lang=lang)
 
         prev_output = torch.ones(1, self.max_len, dtype=torch.int64)*self.pad_index
+        prev_output = prev_output.to(self.device)
         out = []
         prev_output[:, 0] = self.bos_index
         prev_token = self.bos_index
@@ -51,9 +55,8 @@ class LanguageModeling(Trainer):
         while prev_token is not self.eos_index and word_count<self.max_len-1:
 
             word_count+=1
-            tgt_mask = np.ones((1, self.max_len))
-            tgt_mask = torch.from_numpy(tgt_mask)
-            tgt_mask = tgt_mask.masked_fill_(prev_output == self.pad_index, 0)
+            tgt_mask = torch.ones(1, word_count+1).to(self.device)
+            tgt_mask[:, word_count] = 0
             dec_logits = self.transformer.decode(prev_output=prev_output[:, :word_count+1],
                                         latent_seq=latent_code,
                                         src_mask=src_mask,
@@ -68,19 +71,24 @@ class LanguageModeling(Trainer):
             prev_token = prev_output[:, word_count].item()
             word = self.data['dico'][self.id2lang[lang]][index.item()]
             out.append(word)
-            print(out)
 
+        print("output", out)
         input = []
         for i in range(sent.size(1)):
             idx = sent[:, i]
-            input.append(self.data['dico']['en'][idx])
+            input.append(self.data['dico'][self.id2lang[lang]][idx])
 
         print("input ", input)
 
+        loss = F.cross_entropy(input=torch.flatten(prev_output, 0, 1),
+                               target=torch.flatten(src_batch, 0, 1))
+
+        print("loss ", loss)
+
     def train(self, n_iter):
 
-        for param in self.transformer.parameters():
-            print(param.get_device())
+        # for param in self.transformer.parameters():
+        #     print(param.get_device())
 
         lang = 0
         get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
@@ -89,7 +97,7 @@ class LanguageModeling(Trainer):
 
         for i in range(n_iter):
             opt.zero_grad()
-            batch_dict = next(train_iterator)
+            batch_dict = next_train_iterator()
 
             loss = self.reconstruction_loss(batch_dict, lang=lang)
 
@@ -101,13 +109,13 @@ class LanguageModeling(Trainer):
 
     def test(self, n_tests):
         self.transformer.eval()
-        lang=0
+        lang = 0
+        get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
+        train_iterator = get_iterator()
         for i in range(n_tests):
-            pass
-            # batch, l = self.get_train_batch(0)
-            # self.greedy_decoding(batch)
-            #loss = self.reconstruction_loss(src_batch=batch, lengths=l, lang=lang)
-
+            batch_dict = next_train_iterator()
+            for j in range(batch_dict["src_batch"].size(0))
+                self.greedy_decoding(batch_dict, lang)
 
 if __name__ == "__main__":
 
