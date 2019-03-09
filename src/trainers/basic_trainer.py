@@ -72,8 +72,9 @@ class Trainer(ABC):
             smooth_target.index_fill_(0, mask.squeeze(), 0.0)
         
         if torch.isnan(self.kl_div_loss(x, smooth_target)).item():
-            print("x", x)
-            print("smooth target ", smooth_target)
+            self.logger.debug("loss is nan")
+            self.logger.debug("x", x)
+            self.logger.debug("smooth target ", smooth_target)
         
         return self.kl_div_loss(x, smooth_target)
 

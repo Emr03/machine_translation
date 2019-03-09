@@ -22,10 +22,7 @@ class LanguageModeling(Trainer):
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
-        
-        print(src_batch.shape)
-        print(tgt_batch.shape)
-        print(src_mask.shape)
+
         output_seq = self.transformer(input_seq=src_batch,
                                   prev_output=tgt_batch,
                                   src_mask=src_mask,
@@ -116,7 +113,7 @@ class LanguageModeling(Trainer):
 
             if i % 50 == 0:
                 #print("iter ", i, "loss: ", loss)
-                self.logger.info("iter %i: loss %80.1f" %(i, loss.item()))
+                self.logger.info("iter %i: loss %40.1f" %(i, loss.item()))
 
             loss.backward()
             opt.step()
