@@ -10,7 +10,7 @@ from .pretrain_embeddings import *
 
 
 class Transformer(torch.nn.Module):
-    def __init__(self, data_params, embd_file, is_shared_emb=True):
+    def __init__(self, data_params, embd_file, logger, is_shared_emb=True):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -18,6 +18,7 @@ class Transformer(torch.nn.Module):
         super(Transformer, self).__init__()
         assert (type(is_shared_emb) is bool)
 
+        self.logger = logger
         self.d_model = params["d_model"]
         self.n_layers = params["n_layers"]
         self.dff = params["dff"]
@@ -203,15 +204,10 @@ class Transformer(torch.nn.Module):
         for i in range(self.n_langs):
             _found = found[0 if self.is_shared_emb  else i]
             _lower = lower[0 if self.is_shared_emb  else i]
-            logger.info(
+            self.logger.info(
                 "Initialized %i / %i word embeddings for \"%s\" (including %i "
                 "after lowercasing)." % (_found, self.vocab_size[i], i, _lower)
             )
-
-    def label_smoothing(self):
-        # TODO
-        pass
-
 
 if __name__ == "__main__":
     # test transformer

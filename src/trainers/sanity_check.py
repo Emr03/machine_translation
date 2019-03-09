@@ -1,4 +1,4 @@
-
+from src.logger import create_logger
 import torch.nn.functional as F
 import torch.cuda
 import numpy as np
@@ -8,6 +8,7 @@ from src.data_loading import get_parser
 from src.data.dataset import *
 from src.data.loader import *
 from .basic_trainer import Trainer
+import logging
 
 class LanguageModeling(Trainer):
 
@@ -40,8 +41,10 @@ class LanguageModeling(Trainer):
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
 
-        assert(src_batch.shape[0] == 1)
-        assert(tgt_batch.shape[0] == 1)
+        if tgt_batch.shape[0] > 1:
+            tgt_batch = tgt_batch[0]
+            src_batch = src_batch[0]
+            src_mask = src_mask[0]
 
         latent_code = self.transformer.encode(input_seq=src_batch,
                                               src_mask=src_mask,
@@ -92,17 +95,28 @@ class LanguageModeling(Trainer):
         #     print(param.get_device())
 
         lang = 0
+        logger.info("Training language model for %s " % (self.id2lang[lang]))
+
         get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
         train_iterator = get_iterator()
         opt = torch.optim.Adam(self.transformer.parameters(), lr=0.0001,  betas=(0.9, 0.98), eps=1e-9)
 
         for i in range(n_iter):
             opt.zero_grad()
-            batch_dict = next(train_iterator)
+
+            try:
+                batch_dict = next(train_iterator)
+
+            except StopIteration:
+                # restart the iterator
+                iterator = get_iterator()
+                batch_dict = next(iterator)
+
             loss = self.reconstruction_loss(batch_dict, lang=lang)
 
             if i % 50 == 0:
-                print("iter ", i, "loss: ", loss)
+                #print("iter ", i, "loss: ", loss)
+                self.logger.info("iter %i: loss %80.1f" %(i, loss.item()))
 
             loss.backward()
             opt.step()
@@ -118,12 +132,16 @@ class LanguageModeling(Trainer):
 
 if __name__ == "__main__":
 
+    logger = create_logger("logs/sanity_check.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
-    model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
+    model = Transformer(data_params=data_params, logger=logger, embd_file="corpora/mono/all.en-fr.60000.vec")
     trainer = LanguageModeling(model)
-    #trainer.train(30000)
-    #trainer.save_model("sanity_check.pth")
-    trainer.load_model("sanity_check.pth")
+    trainer.train(100000)
+    trainer.save_model("language_model.pth")
+    logger.info("testing trained model")
+    trainer.test(10)
+    logger.info("testing loaded model")
+    trainer.load_model("language_model.pth")
     trainer.test(10)

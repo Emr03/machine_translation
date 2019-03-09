@@ -13,6 +13,7 @@ class Trainer(ABC):
 
         super().__init__()
         self.transformer = transformer
+        self.logger = transformer.logger
 
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
