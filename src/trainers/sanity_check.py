@@ -21,7 +21,10 @@ class LanguageModeling(Trainer):
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
-
+        
+        print(src_batch.shape)
+        print(tgt_batch.shape)
+        print(src_mask.shape)
         output_seq = self.transformer(input_seq=src_batch,
                                   prev_output=tgt_batch,
                                   src_mask=src_mask,
@@ -74,7 +77,7 @@ class LanguageModeling(Trainer):
         print("output", out)
         input = []
         for i in range(src_batch.size(1)):
-            idx = src_batch[:, i]
+            idx = src_batch[:, i].item()
             input.append(self.data['dico'][self.id2lang[lang]][idx])
 
         print("input ", input)
@@ -96,7 +99,6 @@ class LanguageModeling(Trainer):
         for i in range(n_iter):
             opt.zero_grad()
             batch_dict = next(train_iterator)
-
             loss = self.reconstruction_loss(batch_dict, lang=lang)
 
             if i % 50 == 0:
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     check_all_data_params(data_params)
     model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
     trainer = LanguageModeling(model)
-    trainer.train(3000)
-    trainer.save_model("sanity_check.pth")
-    # trainer.load_model("sanity_check.pth")
-    # trainer.test(10)
+    #trainer.train(30000)
+    #trainer.save_model("sanity_check.pth")
+    trainer.load_model("sanity_check.pth")
+    trainer.test(10)

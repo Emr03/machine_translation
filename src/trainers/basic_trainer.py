@@ -64,11 +64,16 @@ class Trainer(ABC):
 
         # find where the target word is a pad symbol, returns indices along dim 0
         mask = torch.nonzero(target.squeeze().data == self.pad_index)
-
-        if mask.dim() > 0:
+        
+        if mask.size(0) != 0:
+            # print("mask ", mask.size())
             # fill the entries of pad symbols with 0 prob
             smooth_target.index_fill_(0, mask.squeeze(), 0.0)
-
+        
+        if torch.isnan(self.kl_div_loss(x, smooth_target)).item():
+            print("x", x)
+            print("smooth target ", smooth_target)
+        
         return self.kl_div_loss(x, smooth_target)
 
     def get_src_mask(self, src_batch):
@@ -130,7 +135,7 @@ class Trainer(ABC):
 
                 # move to cuda
                 tgt_batch = tgt_batch.to(self.device)
-                src_batch = tgt_batch.to(self.device)
+                src_batch = src_batch.to(self.device)
                 src_mask = src_mask.to(self.device)
                 tgt_mask = tgt_mask.to(self.device)
                 src_l = src_l.to(self.device)
@@ -142,14 +147,14 @@ class Trainer(ABC):
                        "tgt_mask": tgt_mask,
                        "src_l": src_l,
                        "tgt_l": tgt_l}
-
+        
         return iterator
 
     def save_model(self, path):
         torch.save(self.transformer.state_dict(), path)
 
     def load_model(self, path):
-        self.transformer.load_state_dict(torch.load(path))
+        self.transformer.load_state_dict(torch.load(path, map_location=self.device))
 
 if __name__ == "__main__":
 
