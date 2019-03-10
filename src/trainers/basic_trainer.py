@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import torch.nn as nn
 import numpy as np
 from src.transformer import Transformer
 from src.noise_model import NoiseModel
@@ -9,18 +10,26 @@ from abc import ABC, abstractmethod
 
 class Trainer(ABC):
 
-    def __init__(self, transformer):
+    def __init__(self, transformer, devices, parallel=True):
 
         super().__init__()
         self.transformer = transformer
         self.logger = transformer.logger
 
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and not parallel:
             self.device = torch.device('cuda')
             self.transformer.cuda()
 
+        elif torch.cuda.is_available() and parallel:
+            n_devices = torch.cuda.device_count()
+            self.logger.info("Using %i GPU's" % (n_devices))
+            self.device = torch.device("cuda:0")
+            self.transformer = nn.DataParallel(self.transformer)
+            self.transformer.to(self.device)
+
         else:
             self.device = torch.device('cpu')
+            self.logger.info("Using CPU")
 
         self.data = transformer.data
         self.data_params = transformer.data_params
@@ -55,6 +64,9 @@ class Trainer(ABC):
         x = x.reshape(-1, x.size(-1))
         target = target.reshape(-1, 1)
 
+        # get number of tokens, to scale loss
+        normalize = x.size(-1)
+
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)
         smooth_target.fill_(self.smoothing / self.vocab_size[lang])
@@ -76,7 +88,7 @@ class Trainer(ABC):
             self.logger.debug("x", x)
             self.logger.debug("smooth target ", smooth_target)
         
-        return self.kl_div_loss(x, smooth_target)
+        return self.kl_div_loss(x, smooth_target) / normalize
 
     def get_src_mask(self, src_batch):
         mask = torch.ones_like(src_batch)
