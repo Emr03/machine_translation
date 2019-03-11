@@ -31,7 +31,7 @@ class ParallelTrainer(Trainer):
 
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
-    def greedy_decoding(self, batch_dict, lang):
+    def greedy_decoding(self, batch_dict, lang1, lang2):
 
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
@@ -46,7 +46,7 @@ class ParallelTrainer(Trainer):
 
         latent_code = self.transformer.module.encode(input_seq=src_batch,
                                                      src_mask=src_mask,
-                                                     src_lang=lang)
+                                                     src_lang=lang1)
 
         prev_output = torch.ones(1, self.max_len, dtype=torch.int64) * self.pad_index
         prev_output = prev_output.to(self.device)
@@ -63,7 +63,7 @@ class ParallelTrainer(Trainer):
                                                         latent_seq=latent_code,
                                                         src_mask=src_mask,
                                                         tgt_mask=tgt_mask,
-                                                        tgt_lang=lang)
+                                                        tgt_lang=lang2)
 
             scores = F.softmax(dec_logits, dim=-1)
             max_score, index = torch.max(scores[:, -1], -1)
@@ -122,14 +122,13 @@ class ParallelTrainer(Trainer):
 
     def test(self, n_tests):
         self.transformer.eval()
-        lang = 0
-        get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
+        lang1 = 0
+        lang2 = 1
+        get_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=False)
         train_iterator = get_iterator()
         for i in range(n_tests):
             batch_dict = next(train_iterator)
-            self.greedy_decoding(batch_dict, lang)
-
-
+            self.greedy_decoding(batch_dict, lang1, lang2)
 
 
 if __name__ == "__main__":
