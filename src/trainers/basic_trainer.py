@@ -217,6 +217,9 @@ class Trainer(ABC):
                 src_batch, src_l = src
                 tgt_batch, tgt_l = tgt
 
+                print("src_batch, src_l", src_batch, src_l)
+                print("tgt_batch, tgt_l", tgt_batch, tgt_l)
+
                 tgt_batch.transpose_(0, 1)
                 if add_noise:
                     src_batch, src_l = self.noise_model.add_noise(src_batch, src_l, lang1)
