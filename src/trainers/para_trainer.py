@@ -51,8 +51,8 @@ class ParallelTrainer(Trainer):
 
             except StopIteration:
                 # restart the iterator
-                iterator = get_iterator()
-                batch_dict = next(iterator)
+                train_iterator = get_iterator()
+                batch_dict = next(train_iterator)
 
             try:
                 loss = self.translation_loss(batch_dict, lang1=lang1, lang2=lang2)

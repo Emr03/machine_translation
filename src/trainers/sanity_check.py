@@ -103,8 +103,8 @@ class LanguageModeling(Trainer):
 
             except StopIteration:
                 # restart the iterator
-                iterator = get_iterator()
-                batch_dict = next(iterator)
+                train_iterator = get_iterator()
+                batch_dict = next(train_iterator)
             
             try:
                 loss = self.reconstruction_loss(batch_dict, lang=lang)
