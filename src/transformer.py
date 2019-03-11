@@ -76,6 +76,10 @@ class Transformer(torch.nn.Module):
         if init_emb and embd_file is not None:
             self.initialize_embeddings(embedding_file=embd_file)
 
+        else:
+            for l in self.linear_layers:
+                l.apply(init_weights)
+
     def encode(self, input_seq, src_mask, src_lang):
 
         return self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
