@@ -197,13 +197,16 @@ class Trainer(ABC):
         :return:
         """
 
+        src_lang = self.id2lang[lang1]
+        tgt_lang = self.id2lang[lang2]
+
         if train:
-            assert (self.data['para'][(lang1, lang2)]['train'] is not None)
-            get_iterator = self.data['para'][(lang1, lang2)]['train'].get_iterator(shuffle=True, group_by_size=True)
+            assert (self.data['para'][(src_lang, tgt_lang)]['train'] is not None)
+            get_iterator = self.data['para'][(src_lang, tgt_lang)]['train'].get_iterator(shuffle=True, group_by_size=True)
 
         else:
-            assert (self.data['para'][(lang1, lang2)]['valid'] is not None)
-            get_iterator = self.data['para'][(lang1, lang2)]['valid'].get_iterator(shuffle=True, group_by_size=True)
+            assert (self.data['para'][(src_lang, tgt_lang)]['valid'] is not None)
+            get_iterator = self.data['para'][(src_lang, tgt_lang)]['valid'].get_iterator(shuffle=True, group_by_size=True)
 
         batch_iterator = get_iterator()
 
