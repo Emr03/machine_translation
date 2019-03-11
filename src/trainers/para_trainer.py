@@ -40,7 +40,7 @@ class ParallelTrainer(Trainer):
         lang2 = 1
         logger.info("Training translation model for %s -> %s " % (self.id2lang[lang1], self.id2lang[lang2]))
 
-        get_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=True, add_noise=True)
+        get_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=True)
         train_iterator = get_iterator()
 
         for i in range(n_iter):
