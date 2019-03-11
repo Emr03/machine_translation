@@ -31,6 +31,40 @@ class ParallelTrainer(Trainer):
 
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
+    def translation_samples(self, batch_dict, lang1, lang2):
+
+        tgt_mask = batch_dict["tgt_mask"]
+        tgt_batch = batch_dict["tgt_batch"]
+        src_mask = batch_dict["src_mask"]
+        src_batch = batch_dict["src_batch"]
+
+        if tgt_batch.shape[0] > 1:
+            tgt_batch = tgt_batch[0, :].unsqueeze(0)
+            src_batch = src_batch[0, :].unsqueeze(0)
+            src_mask = src_mask[0, :].unsqueeze(0)
+
+        output_seq = self.transformer(input_seq=src_batch,
+                                      prev_output=tgt_batch,
+                                      src_mask=src_mask,
+                                      tgt_mask=tgt_mask,
+                                      src_lang=lang1,
+                                      tgt_lang=lang1)
+
+        loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+        print("loss")
+
+        scores = F.softmax(output_seq, dim=-1)
+        max_score, indices = torch.max(scores[:, :, -1], -1)
+
+        words = [self.data['dico'][self.id2lang[lang2]][indices[i].item()] for i in range(indices.size(1))]
+        print("output", words)
+
+        for i in range(src_batch.size(1)):
+            idx = src_batch[:, i].item()
+            input.append(self.data['dico'][self.id2lang[lang1]][idx])
+
+        print("input ", input)
+
     def greedy_decoding(self, batch_dict, lang1, lang2):
 
         tgt_batch = batch_dict["tgt_batch"]
@@ -128,7 +162,9 @@ class ParallelTrainer(Trainer):
         train_iterator = get_iterator()
         for i in range(n_tests):
             batch_dict = next(train_iterator)
-            self.greedy_decoding(batch_dict, lang1, lang2)
+            #self.greedy_decoding(batch_dict, lang1, lang2)
+            self.translation_samples(batch_dict, lang1, lang2)
+
 
 
 if __name__ == "__main__":
@@ -142,10 +178,11 @@ if __name__ == "__main__":
 
     trainer = ParallelTrainer(model)
 
-    trainer.train(3000)
-    trainer.save_model("en_fr.pth")
-    logger.info("testing trained model")
-    trainer.test(10)
+    # trainer.train(3000)
+    # trainer.save_model("en_fr.pth")
+    # logger.info("testing trained model")
+    # trainer.test(10)
     logger.info("testing loaded model")
     trainer.load_model("en_fr.pth")
+
     trainer.test(10)
