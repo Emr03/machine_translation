@@ -108,15 +108,20 @@ class LanguageModeling(Trainer):
                 # restart the iterator
                 iterator = get_iterator()
                 batch_dict = next(iterator)
+            
+            try:
+                loss = self.reconstruction_loss(batch_dict, lang=lang)
 
-            loss = self.reconstruction_loss(batch_dict, lang=lang)
+                if i % 50 == 0:
+                    #print("iter ", i, "loss: ", loss)
+                    self.logger.info("iter %i: loss %40.1f" %(i, loss.item()))
 
-            if i % 50 == 0:
-                #print("iter ", i, "loss: ", loss)
-                self.logger.info("iter %i: loss %40.1f" %(i, loss.item()))
+                loss.backward()
+                opt.step()
 
-            loss.backward()
-            opt.step()
+            except Exception as e:
+                self.logger.debug("Exception in training loop")
+                self.logger.debug(e.message)
 
     def test(self, n_tests):
         self.transformer.eval()
@@ -141,5 +146,5 @@ if __name__ == "__main__":
     logger.info("testing trained model")
     trainer.test(10)
     logger.info("testing loaded model")
-    trainer.load_model("enlanguage_model.pth")
+    trainer.load_model("en_language_model.pth")
     trainer.test(10)

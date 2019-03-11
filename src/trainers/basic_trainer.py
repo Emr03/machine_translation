@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 
 class Trainer(ABC):
 
-    def __init__(self, transformer, devices, parallel=True):
+    def __init__(self, transformer, parallel=True):
 
         super().__init__()
         self.transformer = transformer
@@ -25,6 +25,7 @@ class Trainer(ABC):
             self.logger.info("Using %i GPU's" % (n_devices))
             self.device = torch.device("cuda:0")
             self.transformer = nn.DataParallel(self.transformer)
+            #self.logger.debug("transformer ", self.transformer)
             self.transformer.to(self.device)
 
         else:
@@ -36,6 +37,8 @@ class Trainer(ABC):
         self.vocab_size = transformer.vocab_size
         self.noise_model = NoiseModel(data=self.data, params=self.data_params)
         self.max_len = 100
+        self.train_iterators = transformer.train_iterators
+        #self.val_iterators = transformer.val_iterators
 
         self.pad_index = transformer.pad_index
         self.eos_index = transformer.eos_index
@@ -65,7 +68,7 @@ class Trainer(ABC):
         target = target.reshape(-1, 1)
 
         # get number of tokens, to scale loss
-        normalize = x.size(-1)
+        normalize = target.size(0)
 
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)
@@ -126,10 +129,10 @@ class Trainer(ABC):
         """
 
         if train:
-            get_src_iterator = self.transformer.train_iterators[lang]
+            get_src_iterator = self.train_iterators[lang]
 
         else:
-            get_src_iterator = self.transformer.val_iterators[lang]
+            get_src_iterator = self.val_iterators[lang]
 
         src_iterator = get_src_iterator()
 
