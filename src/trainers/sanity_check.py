@@ -39,11 +39,13 @@ class LanguageModeling(Trainer):
         src_batch = batch_dict["src_batch"]
 
         if tgt_batch.shape[0] > 1:
-            tgt_batch = tgt_batch[0]
-            src_batch = src_batch[0]
-            src_mask = src_mask[0]
+            tgt_batch = tgt_batch[0, :].unsqueeze(0)
+            src_batch = src_batch[0, :].unsqueeze(0)
+            src_mask = src_mask[0, :].unsqueeze(0)
 
-        latent_code = self.transformer.encode(input_seq=src_batch,
+        print(tgt_batch.shape)
+
+        latent_code = self.transformer.module.encode(input_seq=src_batch,
                                               src_mask=src_mask,
                                               src_lang=lang)
 
@@ -59,7 +61,7 @@ class LanguageModeling(Trainer):
             word_count+=1
             tgt_mask = torch.ones(1, word_count+1).to(self.device)
             tgt_mask[:, word_count] = 0
-            dec_logits = self.transformer.decode(prev_output=prev_output[:, :word_count+1],
+            dec_logits = self.transformer.module.decode(prev_output=prev_output[:, :word_count+1],
                                         latent_seq=latent_code,
                                         src_mask=src_mask,
                                         tgt_mask=tgt_mask,
@@ -67,8 +69,8 @@ class LanguageModeling(Trainer):
 
             scores = F.softmax(dec_logits, dim=-1)
             max_score, index = torch.max(scores[:, -1], -1)
-            print("index", index)
-
+            # print("index", index)
+            
             prev_output[:, word_count] = index.item()
             prev_token = prev_output[:, word_count].item()
             word = self.data['dico'][self.id2lang[lang]][index.item()]
@@ -81,10 +83,6 @@ class LanguageModeling(Trainer):
             input.append(self.data['dico'][self.id2lang[lang]][idx])
 
         print("input ", input)
-
-        loss = self.compute_kl_div_loss(x=prev_output, target=src_batch, lang=lang)
-
-        print("loss ", loss)
 
     def train(self, n_iter):
 
@@ -140,10 +138,10 @@ if __name__ == "__main__":
     model = Transformer(data_params=data_params, logger=logger, embd_file="corpora/mono/all.en-fr.60000.vec")
     trainer = LanguageModeling(model)
 
-    trainer.train(30000)
-    trainer.save_model("en_language_model.pth")
-    logger.info("testing trained model")
-    trainer.test(10)
+    #trainer.train(30000)
+    #trainer.save_model("en_language_model.pth")
+    #logger.info("testing trained model")
+    #trainer.test(10)
     logger.info("testing loaded model")
     trainer.load_model("en_language_model.pth")
     trainer.test(10)
