@@ -37,8 +37,6 @@ class Trainer(ABC):
         self.vocab_size = transformer.vocab_size
         self.noise_model = NoiseModel(data=self.data, params=self.data_params)
         self.max_len = 100
-        self.train_iterators = transformer.train_iterators
-        #self.val_iterators = transformer.val_iterators
 
         self.pad_index = transformer.pad_index
         self.eos_index = transformer.eos_index
