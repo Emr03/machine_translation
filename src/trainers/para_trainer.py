@@ -54,16 +54,17 @@ class ParallelTrainer(Trainer):
         print("loss")
 
         scores = F.softmax(output_seq, dim=-1)
-        max_score, indices = torch.max(scores[:, :, -1], -1)
-
-        words = [self.data['dico'][self.id2lang[lang2]][indices[i].item()] for i in range(indices.size(1))]
+        max_score, indices = torch.max(scores, -1)
+        print(indices)
+        words = [self.data['dico'][self.id2lang[lang2]][indices[:, i].item()] for i in range(indices.size(1))]
         print("output", words)
 
+        input_sent = []
         for i in range(src_batch.size(1)):
             idx = src_batch[:, i].item()
-            input.append(self.data['dico'][self.id2lang[lang1]][idx])
+            input_sent.append(self.data['dico'][self.id2lang[lang1]][idx])
 
-        print("input ", input)
+        print("input ", input_sent)
 
     def greedy_decoding(self, batch_dict, lang1, lang2):
 
