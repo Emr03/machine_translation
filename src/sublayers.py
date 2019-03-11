@@ -70,8 +70,6 @@ class SelfAttention(torch.nn.Module):
         self.W_v = torch.nn.Linear(self.d_model, self.d_model, bias=False)
         self.W_o = torch.nn.Linear(self.d_model, self.d_model, bias=False)
 
-        # TODO:add the matrices to the set of model weights
-
     def forward(self, x_q, x_k, x_v, mask=None):
         """
         shapes = (batch_size, sentence_len, d_model)
@@ -97,7 +95,7 @@ class SelfAttention(torch.nn.Module):
             scores = scores.masked_fill(mask == 0, -1e9)
 
         #print("scores", scores[0, 0, :, :])
-        scores = torch.nn.functional.softmax(scores, dim=2)
+        scores = torch.nn.functional.softmax(scores, dim=-1)
 
         # matmul has shape = batch_size, heads, sentence_len, d_k
         # for each attention head, for each position, we have an encoding of dimension d_k
