@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
-    model = Transformer(data_params=data_params, logger=logger, embd_file="corpora/mono/all.en-fr.60000.vec")
+    model = Transformer(data_params=data_params, logger=logger, init_emb=False)
     trainer = LanguageModeling(model)
 
     #trainer.train(30000)

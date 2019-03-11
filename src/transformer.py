@@ -10,7 +10,8 @@ from .pretrain_embeddings import *
 
 
 class Transformer(torch.nn.Module):
-    def __init__(self, data_params, embd_file, logger, is_shared_emb=True):
+
+    def __init__(self, data_params, embd_file, logger, init_emb=True, is_shared_emb=True):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -43,13 +44,15 @@ class Transformer(torch.nn.Module):
                                       params=params,
                                       n_langs=self.n_langs,
                                       vocab_size=self.vocab_size,
-                                      is_shared_emb=is_shared_emb)
+                                      is_shared_emb=is_shared_emb,
+                                      freeze_emb=init_emb)
 
         self.decoder = StackedDecoder(n_layers=self.n_layers,
                                       params=params,
                                       n_langs=self.n_langs,
                                       vocab_size=self.vocab_size,
-                                      is_shared_emb=is_shared_emb)
+                                      is_shared_emb=is_shared_emb,
+                                      freeze_emb=init_emb)
 
         linear = torch.nn.Linear(self.d_model, self.vocab_size[0])
 
@@ -69,7 +72,9 @@ class Transformer(torch.nn.Module):
 
         self.encoder.apply(init_weights)
         self.decoder.apply(init_weights)
-        self.initialize_embeddings(embedding_file=embd_file)
+
+        if init_emb:
+            self.initialize_embeddings(embedding_file=embd_file)
 
     def encode(self, input_seq, src_mask, src_lang):
 

@@ -28,7 +28,7 @@ class EncoderLayer(torch.nn.Module):
 
 class StackedEncoder(torch.nn.Module):
 
-    def __init__(self, n_layers, params, vocab_size, n_langs, is_shared_emb=True):
+    def __init__(self, n_layers, params, vocab_size, n_langs, is_shared_emb=True, freeze_emb=True):
         """
 
         :param n_layers:
@@ -49,8 +49,9 @@ class StackedEncoder(torch.nn.Module):
             self.embedding_layers = torch.nn.ModuleList([torch.nn.Embedding(self.vocab_size[l], self.d_model) for l in range(self.n_langs)])
 
         # freeze embedding layers
-        for l in self.embedding_layers:
-            l.weight.requires_grad = False
+        if freeze_emb:
+            for l in self.embedding_layers:
+                l.weight.requires_grad = False
 
         self.pos_enc = PositionalEncoding(params)
         self.encoder_layers = torch.nn.ModuleList([EncoderLayer(params) for _ in range(n_layers)])
