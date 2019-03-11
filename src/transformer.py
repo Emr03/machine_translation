@@ -11,7 +11,7 @@ from .pretrain_embeddings import *
 
 class Transformer(torch.nn.Module):
 
-    def __init__(self, data_params, embd_file, logger, init_emb=True, is_shared_emb=True):
+    def __init__(self, data_params, logger,  embd_file=None, init_emb=True, is_shared_emb=True):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -73,7 +73,7 @@ class Transformer(torch.nn.Module):
         self.encoder.apply(init_weights)
         self.decoder.apply(init_weights)
 
-        if init_emb:
+        if init_emb and embd_file is not None:
             self.initialize_embeddings(embedding_file=embd_file)
 
     def encode(self, input_seq, src_mask, src_lang):
