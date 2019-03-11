@@ -149,10 +149,12 @@ class Trainer(ABC):
         """
 
         if train:
-            get_src_iterator = self.train_iterators[lang]
+            assert (self.data['mono'][lang]['train'] is not None)
+            get_src_iterator = self.data['mono'][lang]['train'].get_iterator(shuffle=True, group_by_size=True)
 
         else:
-            get_src_iterator = self.val_iterators[lang]
+            assert (self.data['mono'][lang]['valid'] is not None)
+            get_src_iterator = self.data['mono'][lang]['valid'].get_iterator(shuffle=True, group_by_size=True)
 
         src_iterator = get_src_iterator()
 
@@ -187,6 +189,54 @@ class Trainer(ABC):
         
         return iterator
 
+    def get_para_iterator(self, lang1, lang2, train=True, add_noise=False):
+        """
+        returns training batches to translate from lang1 to lang2
+        :param lang1:
+        :param lang2:
+        :param train:
+        :param add_noise:
+        :return:
+        """
+
+        if train:
+            assert (self.data['para'][(lang1, lang2)]['train'] is not None)
+            get_iterator = self.data['para'][(lang1, lang2)]['train'].get_iterator(shuffle=True, group_by_size=True)
+
+        else:
+            assert (self.data['para'][(lang1, lang2)]['valid'] is not None)
+            get_iterator = self.data['para'][(lang1, lang2)]['valid'].get_iterator(shuffle=True, group_by_size=True)
+
+        batch_iterator = get_iterator()
+
+        def iterator():
+
+            for src_batch, src_l, tgt_batch, tgt_l in batch_iterator:
+
+                tgt_batch.transpose_(0, 1)
+                if add_noise:
+                    src_batch, src_l = self.noise_model.add_noise(src_batch, src_l, lang1)
+
+                src_mask = self.get_src_mask(src_batch)
+                tgt_mask = self.get_tgt_mask(tgt_batch)
+
+                # move to cuda
+                tgt_batch = tgt_batch.to(self.device)
+                src_batch = src_batch.to(self.device)
+                src_mask = src_mask.to(self.device)
+                tgt_mask = tgt_mask.to(self.device)
+                src_l = src_l.to(self.device)
+                tgt_l = tgt_l.to(self.device)
+
+                yield {"src_batch": src_batch,
+                       "tgt_batch": tgt_batch,
+                       "src_mask": src_mask,
+                       "tgt_mask": tgt_mask,
+                       "src_l": src_l,
+                       "tgt_l": tgt_l}
+
+        return iterator
+
     def save_model(self, path):
         torch.save(self.transformer.state_dict(), path)
 
@@ -203,7 +253,6 @@ if __name__ == "__main__":
         confidence = 1.0 - smoothing
         pad_index = 3
         kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
-
 
         x = F.log_softmax(x, dim=-1)
 

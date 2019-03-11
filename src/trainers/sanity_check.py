@@ -30,7 +30,7 @@ class LanguageModeling(Trainer):
                                   src_lang=lang,
                                   tgt_lang=lang)
        
-        return self.compute_kl_div_loss(x=output_seq, target=src_batch, lang=lang)
+        return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang)
 
     def greedy_decoding(self, batch_dict, lang):
 

@@ -110,12 +110,6 @@ class Transformer(torch.nn.Module):
         self.languages = list(all_data['dico'].keys())
         self.id2lang = {i: lang for i, lang in enumerate(self.languages)}
 
-        self.mono_data_train = [all_data['mono'][self.languages[0]]['train'],
-                                all_data['mono'][self.languages[1]]['train']]
-
-        #self.mono_data_valid = [all_data['mono'][self.languages[0]]['valid'],
-        #                        all_data['mono'][self.languages[1]]['valid']]
-
         self.dictionaries = all_data['dico']
         self.vocab_size = [len(self.dictionaries[l].word2id) for l in self.languages]
 
@@ -130,11 +124,6 @@ class Transformer(torch.nn.Module):
         print("unk_index", data_params.unk_index)
         print("blank_index", data_params.blank_index)
 
-        self.train_iterators = [self.mono_data_train[l].get_iterator(shuffle=True, group_by_size=True)
-                                for l in range(len(self.languages))]
-
-        #self.val_iterators = [self.mono_data_valid[l].get_iterator(shuffle=True, group_by_size=True)
-        #                      for l in range(len(self.languages))]
 
     def initialize_embeddings(self, embedding_file):
 
