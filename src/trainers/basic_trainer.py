@@ -223,8 +223,10 @@ class Trainer(ABC):
                 if add_noise:
                     src_batch, src_l = self.noise_model.add_noise(src_batch, src_l, lang1)
 
+                # does not create new tensor
+                prev_output = tgt_batch[:, :-1]
                 src_mask = self.get_src_mask(src_batch)
-                tgt_mask = self.get_tgt_mask(tgt_batch)
+                tgt_mask = self.get_tgt_mask(prev_output)
 
                 # move to cuda
                 tgt_batch = tgt_batch.to(self.device)
@@ -236,6 +238,7 @@ class Trainer(ABC):
 
                 yield {"src_batch": src_batch,
                        "tgt_batch": tgt_batch,
+                       "prev_output": prev_output,
                        "src_mask": src_mask,
                        "tgt_mask": tgt_mask,
                        "src_l": src_l,

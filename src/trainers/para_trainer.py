@@ -21,15 +21,16 @@ class ParallelTrainer(Trainer):
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
+        prev_output = batch_dict["prev_output"]
 
         output_seq = self.transformer(input_seq=src_batch,
-                                      prev_output=tgt_batch,
+                                      prev_output=prev_output,
                                       src_mask=src_mask,
                                       tgt_mask=tgt_mask,
                                       src_lang=lang1,
                                       tgt_lang=lang1)
 
-        return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+        return self.compute_kl_div_loss(x=output_seq[:, 1:, :], target=tgt_batch[:, 1:], lang=lang2)
 
     def translation_samples(self, batch_dict, lang1, lang2):
 
@@ -37,6 +38,7 @@ class ParallelTrainer(Trainer):
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
+        prev_output = batch_dict["prev_output"]
 
         if tgt_batch.shape[0] > 1:
             tgt_batch = tgt_batch[0, :].unsqueeze(0)
@@ -44,13 +46,13 @@ class ParallelTrainer(Trainer):
             src_mask = src_mask[0, :].unsqueeze(0)
 
         output_seq = self.transformer(input_seq=src_batch,
-                                      prev_output=tgt_batch,
+                                      prev_output=prev_output,
                                       src_mask=src_mask,
                                       tgt_mask=tgt_mask,
                                       src_lang=lang1,
                                       tgt_lang=lang1)
 
-        loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+        loss = self.compute_kl_div_loss(x=output_seq[:, 1:, :], target=tgt_batch[:, 1:], lang=lang2)
         print("loss")
 
         scores = F.softmax(output_seq, dim=-1)
