@@ -71,7 +71,7 @@ class ParallelTrainer(Trainer):
 
 if __name__ == "__main__":
 
-    logger = create_logger("logs/sanity_check.log")
+    logger = create_logger("logs/para_trainer.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
@@ -81,9 +81,9 @@ if __name__ == "__main__":
     trainer = ParallelTrainer(model)
 
     trainer.train(30000)
-    trainer.save_model("en_language_model.pth")
+    trainer.save_model("en_fr.pth")
     logger.info("testing trained model")
     trainer.test(10)
     logger.info("testing loaded model")
-    trainer.load_model("en_language_model.pth")
+    trainer.load_model("en_fr.pth")
     trainer.test(10)
