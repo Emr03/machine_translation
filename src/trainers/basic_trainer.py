@@ -212,7 +212,10 @@ class Trainer(ABC):
 
         def iterator():
 
-            for src_batch, src_l, tgt_batch, tgt_l in batch_iterator:
+            for src, tgt in batch_iterator:
+
+                src_batch, src_l = src
+                tgt_batch, tgt_l = tgt
 
                 tgt_batch.transpose_(0, 1)
                 if add_noise:
