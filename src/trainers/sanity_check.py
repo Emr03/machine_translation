@@ -103,6 +103,7 @@ class LanguageModeling(Trainer):
 
             except StopIteration:
                 # restart the iterator
+                get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
                 train_iterator = get_iterator()
                 batch_dict = next(train_iterator)
             

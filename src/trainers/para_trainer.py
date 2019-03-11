@@ -51,6 +51,7 @@ class ParallelTrainer(Trainer):
 
             except StopIteration:
                 # restart the iterator
+                get_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=False)
                 train_iterator = get_iterator()
                 batch_dict = next(train_iterator)
 
