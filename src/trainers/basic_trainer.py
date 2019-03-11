@@ -49,7 +49,27 @@ class Trainer(ABC):
         self.smoothing = 0.1
         self.confidence = 1.0 - self.smoothing
 
+        # learning rate parameters
+        self.step = 0
+        self.warmup = 4000
+        self.d_model = 512
+        self.factor = 1
+
+        self.opt = torch.optim.Adam(self.transformer.parameters(),
+                                    lr=0.0,  betas=(0.9, 0.98), eps=1e-9)
+
         self.kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
+
+    def opt_step(self):
+
+        self.step += 1
+        lr = self.factor * (self.d_model ** (-0.5) * min(self.step ** (-0.5),
+                                                         self.step * self.warmup ** (-1.5)))
+
+        for p in self.opt.param_groups:
+            p['lr'] = lr
+
+        self.opt.step()
 
     def compute_kl_div_loss(self, x, target, lang):
         """

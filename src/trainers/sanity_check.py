@@ -96,10 +96,9 @@ class LanguageModeling(Trainer):
 
         get_iterator = self.get_lm_iterator(lang=lang, train=True, add_noise=True)
         train_iterator = get_iterator()
-        opt = torch.optim.Adam(self.transformer.parameters(), lr=0.0001,  betas=(0.9, 0.98), eps=1e-9)
 
         for i in range(n_iter):
-            opt.zero_grad()
+            self.opt.zero_grad()
 
             try:
                 batch_dict = next(train_iterator)
@@ -117,7 +116,7 @@ class LanguageModeling(Trainer):
                     self.logger.info("iter %i: loss %40.1f" %(i, loss.item()))
 
                 loss.backward()
-                opt.step()
+                self.opt_step()
 
             except Exception as e:
                 self.logger.debug("Exception in training loop")
@@ -141,7 +140,7 @@ if __name__ == "__main__":
     model = Transformer(data_params=data_params, logger=logger, embd_file="corpora/mono/all.en-fr.60000.vec")
     trainer = LanguageModeling(model)
 
-    trainer.train(300000)
+    trainer.train(30000)
     trainer.save_model("en_language_model.pth")
     logger.info("testing trained model")
     trainer.test(10)
