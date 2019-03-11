@@ -71,14 +71,14 @@ class ParallelTrainer(Trainer):
 
             prev_output[:, word_count] = index.item()
             prev_token = prev_output[:, word_count].item()
-            word = self.data['dico'][self.id2lang[lang]][index.item()]
+            word = self.data['dico'][self.id2lang[lang2]][index.item()]
             out.append(word)
 
         print("output", out)
         input = []
         for i in range(src_batch.size(1)):
             idx = src_batch[:, i].item()
-            input.append(self.data['dico'][self.id2lang[lang]][idx])
+            input.append(self.data['dico'][self.id2lang[lang1]][idx])
 
         print("input ", input)
 
