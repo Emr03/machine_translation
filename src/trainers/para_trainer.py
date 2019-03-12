@@ -33,7 +33,13 @@ class ParallelTrainer(Trainer):
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
     def greedy_decoding(self, batch_dict, lang1, lang2):
-
+        """
+        examine output under slightly different conditions from training
+        :param batch_dict:
+        :param lang1:
+        :param lang2:
+        :return:
+        """
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
@@ -46,34 +52,42 @@ class ParallelTrainer(Trainer):
         print(tgt_batch.shape)
 
         latent_code = self.encode(input_seq=src_batch,
-                                                     src_mask=src_mask,
-                                                     src_lang=lang1)
+                                  src_mask=src_mask,
+                                  src_lang=lang1)
 
-        prev_output = torch.ones(1, self.max_len, dtype=torch.int64) * self.pad_index
+        #prev_output = torch.ones(1, self.max_len, dtype=torch.int64) * self.pad_index
+        #prev_output[:, 0] = self.bos_index
+        #prev_token = self.bos_index
+
+        prev_output = batch_dict["prev_output"]
         prev_output = prev_output.to(self.device)
+        prev_token = prev_output[:, 0]
+
         out = []
-        prev_output[:, 0] = self.bos_index
-        prev_token = self.bos_index
+
         word_count = 0
 
         while prev_token is not self.eos_index and word_count < self.max_len - 1:
+
             word_count += 1
-            tgt_mask = torch.ones(1, word_count + 1).to(self.device)
-            tgt_mask[:, word_count] = 0
-            dec_logits = self.decode(prev_output=prev_output[:, :word_count + 1],
-                                                        latent_seq=latent_code,
-                                                        src_mask=src_mask,
-                                                        tgt_mask=tgt_mask,
-                                                        tgt_lang=lang2)
+            dec_input = prev_output[:, :word_count]
+            print("dec input ", dec_input)
+            dec_logits = self.decode(prev_output=dec_input,
+                                     latent_seq=latent_code,
+                                     src_mask=src_mask,
+                                     tgt_mask=None,
+                                     tgt_lang=lang2)
 
             scores = F.softmax(dec_logits, dim=-1)
             max_score, index = torch.max(scores[:, -1], -1)
             # print("index", index)
 
-            prev_output[:, word_count] = index.item()
+            #prev_output[:, word_count] = index.item()
             prev_token = prev_output[:, word_count].item()
             word = self.data['dico'][self.id2lang[lang2]][index.item()]
             out.append(word)
+            print("output word", word)
+            print("GT word", tgt_batch[:, word_count])
 
         print("output", out)
         input = []
@@ -144,7 +158,7 @@ if __name__ == "__main__":
 
     trainer = ParallelTrainer(model)
     # test iterator
-    get_iter = trainer.get_para_iterator(0, 1)
+    get_iter = trainer.get_para_iterator(lang1=0, lang2=1, train=False, add_noise=False)
     iter = get_iter()
 
     batch_dict = next(iter)
