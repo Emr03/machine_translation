@@ -28,7 +28,7 @@ class ParallelTrainer(Trainer):
                                       src_mask=src_mask,
                                       tgt_mask=tgt_mask,
                                       src_lang=lang1,
-                                      tgt_lang=lang1)
+                                      tgt_lang=lang2)
 
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
@@ -80,7 +80,7 @@ class ParallelTrainer(Trainer):
 
             scores = F.softmax(dec_logits, dim=-1)
             max_score, index = torch.max(scores[:, -1], -1)
-            # print("index", index)
+            print("index", index)
 
             #prev_output[:, word_count] = index.item()
             prev_token = prev_output[:, word_count].item()
@@ -158,22 +158,22 @@ if __name__ == "__main__":
 
     trainer = ParallelTrainer(model)
     # test iterator
-    get_iter = trainer.get_para_iterator(lang1=0, lang2=1, train=False, add_noise=False)
-    iter = get_iter()
+    # get_iter = trainer.get_para_iterator(lang1=0, lang2=1, train=False, add_noise=False)
+    # iter = get_iter()
 
-    batch_dict = next(iter)
-    prev_output = batch_dict["prev_output"]
-    tgt_mask = batch_dict["tgt_mask"]
-    tgt_batch = batch_dict["tgt_batch"]
+    # batch_dict = next(iter)
+    # prev_output = batch_dict["prev_output"]
+    # tgt_mask = batch_dict["tgt_mask"]
+    # tgt_batch = batch_dict["tgt_batch"]
+    #
+    # print("prev_output", prev_output)
+    # print("tgt_mask", tgt_mask)
+    # print("tgt_batch", tgt_batch)
 
-    print("prev_output", prev_output)
-    print("tgt_mask", tgt_mask)
-    print("tgt_batch", tgt_batch)
-
-    #trainer.train(3000)
-    #trainer.save_model("en_fr.pth")
-    #logger.info("testing trained model")
-    #trainer.test(10)
+    trainer.train(15000)
+    trainer.save_model("en_fr.pth")
+    logger.info("testing trained model")
+    trainer.test(10)
     logger.info("testing loaded model")
     trainer.load_model("en_fr.pth")
     trainer.test(10)

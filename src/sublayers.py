@@ -114,12 +114,15 @@ if __name__ == "__main__":
     # test self-attention
     att = SelfAttention(params)
     x = torch.ones(3, 5, 512, dtype=torch.float32)
-    att(x, x, x)
+    # att(x, x, x)
 
     # test self-attention with masking
-    mask = torch.zeros(3, 5)
-    mask[:, 0:2] = 1
-    mask = mask.unsqueeze(-2).unsqueeze(-2)
+    mask= np.tril(np.ones((3, 5, 5)), k=0).astype(np.uint8)
+    mask = torch.from_numpy(mask).unsqueeze_(1)
+
+    # mask = torch.zeros(3, 5)
+    # mask[:, 0:2] = 1
+    #mask = mask.unsqueeze(-2).unsqueeze(-2)
     print("mask ", mask.shape)
     out = att(x, x, x, mask=mask)
     print(out)

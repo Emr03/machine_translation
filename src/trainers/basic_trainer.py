@@ -276,14 +276,14 @@ class Trainer(ABC):
                                       src_mask=src_mask,
                                       tgt_mask=tgt_mask,
                                       src_lang=lang1,
-                                      tgt_lang=lang1)
+                                      tgt_lang=lang2)
 
         loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
         print("loss", loss)
 
         scores = F.softmax(output_seq, dim=-1)
         max_score, indices = torch.max(scores, -1)
-        print(indices)
+        #print(indices)
         words = [self.data['dico'][self.id2lang[lang2]][indices[:, i].item()] for i in range(indices.size(1))]
         print("output", words)
 
