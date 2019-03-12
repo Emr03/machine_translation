@@ -143,6 +143,18 @@ if __name__ == "__main__":
                         init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec")
 
     trainer = ParallelTrainer(model)
+    # test iterator
+    get_iter = trainer.get_para_iterator(0, 1)
+    iter = get_iter()
+
+    batch_dict = next(iter)
+    prev_output = batch_dict["prev_output"]
+    tgt_mask = batch_dict["tgt_mask"]
+    tgt_batch = batch_dict["tgt_batch"]
+
+    print("prev_output", prev_output)
+    print("tgt_mask", tgt_mask)
+    print("tgt_batch", tgt_batch)
 
     # trainer.train(3000)
     # trainer.save_model("en_fr.pth")
