@@ -145,6 +145,8 @@ class ParallelTrainer(Trainer):
             batch_dict = next(train_iterator)
             #self.greedy_decoding(batch_dict, lang1, lang2)
             self.output_samples(batch_dict, lang1, lang2)
+            loss = self.translation_loss(batch_dict, lang1, lang2)
+            print("translation loss", loss)
 
 
 if __name__ == "__main__":
