@@ -30,43 +30,7 @@ class ParallelTrainer(Trainer):
                                       src_lang=lang1,
                                       tgt_lang=lang1)
 
-        return self.compute_kl_div_loss(x=output_seq[:, 1:, :], target=tgt_batch[:, 1:], lang=lang2)
-
-    def translation_samples(self, batch_dict, lang1, lang2):
-
-        tgt_mask = batch_dict["tgt_mask"]
-        tgt_batch = batch_dict["tgt_batch"]
-        src_mask = batch_dict["src_mask"]
-        src_batch = batch_dict["src_batch"]
-        prev_output = batch_dict["prev_output"]
-
-        if tgt_batch.shape[0] > 1:
-            tgt_batch = tgt_batch[0, :].unsqueeze(0)
-            src_batch = src_batch[0, :].unsqueeze(0)
-            src_mask = src_mask[0, :].unsqueeze(0)
-
-        output_seq = self.transformer(input_seq=src_batch,
-                                      prev_output=prev_output,
-                                      src_mask=src_mask,
-                                      tgt_mask=tgt_mask,
-                                      src_lang=lang1,
-                                      tgt_lang=lang1)
-
-        loss = self.compute_kl_div_loss(x=output_seq[:, 1:, :], target=tgt_batch[:, 1:], lang=lang2)
-        print("loss")
-
-        scores = F.softmax(output_seq, dim=-1)
-        max_score, indices = torch.max(scores, -1)
-        print(indices)
-        words = [self.data['dico'][self.id2lang[lang2]][indices[:, i].item()] for i in range(indices.size(1))]
-        print("output", words)
-
-        input_sent = []
-        for i in range(src_batch.size(1)):
-            idx = src_batch[:, i].item()
-            input_sent.append(self.data['dico'][self.id2lang[lang1]][idx])
-
-        print("input ", input_sent)
+        return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
     def greedy_decoding(self, batch_dict, lang1, lang2):
 
@@ -81,7 +45,7 @@ class ParallelTrainer(Trainer):
 
         print(tgt_batch.shape)
 
-        latent_code = self.transformer.module.encode(input_seq=src_batch,
+        latent_code = self.encode(input_seq=src_batch,
                                                      src_mask=src_mask,
                                                      src_lang=lang1)
 
@@ -96,7 +60,7 @@ class ParallelTrainer(Trainer):
             word_count += 1
             tgt_mask = torch.ones(1, word_count + 1).to(self.device)
             tgt_mask[:, word_count] = 0
-            dec_logits = self.transformer.module.decode(prev_output=prev_output[:, :word_count + 1],
+            dec_logits = self.decode(prev_output=prev_output[:, :word_count + 1],
                                                         latent_seq=latent_code,
                                                         src_mask=src_mask,
                                                         tgt_mask=tgt_mask,
@@ -166,8 +130,7 @@ class ParallelTrainer(Trainer):
         for i in range(n_tests):
             batch_dict = next(train_iterator)
             #self.greedy_decoding(batch_dict, lang1, lang2)
-            self.translation_samples(batch_dict, lang1, lang2)
-
+            self.output_samples(batch_dict, lang1, lang2)
 
 
 if __name__ == "__main__":

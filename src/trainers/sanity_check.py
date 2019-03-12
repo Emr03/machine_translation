@@ -22,9 +22,10 @@ class LanguageModeling(Trainer):
         tgt_batch = batch_dict["tgt_batch"]
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
+        prev_output = batch_dict["prev_output"]
 
         output_seq = self.transformer(input_seq=src_batch,
-                                  prev_output=tgt_batch,
+                                  prev_output=prev_output,
                                   src_mask=src_mask,
                                   tgt_mask=tgt_mask,
                                   src_lang=lang,
@@ -45,7 +46,7 @@ class LanguageModeling(Trainer):
 
         print(tgt_batch.shape)
 
-        latent_code = self.transformer.module.encode(input_seq=src_batch,
+        latent_code = self.encode(input_seq=src_batch,
                                               src_mask=src_mask,
                                               src_lang=lang)
 
@@ -61,7 +62,7 @@ class LanguageModeling(Trainer):
             word_count+=1
             tgt_mask = torch.ones(1, word_count+1).to(self.device)
             tgt_mask[:, word_count] = 0
-            dec_logits = self.transformer.module.decode(prev_output=prev_output[:, :word_count+1],
+            dec_logits = self.decode(prev_output=prev_output[:, :word_count+1],
                                         latent_seq=latent_code,
                                         src_mask=src_mask,
                                         tgt_mask=tgt_mask,
@@ -128,18 +129,19 @@ class LanguageModeling(Trainer):
         train_iterator = get_iterator()
         for i in range(n_tests):
             batch_dict = next(train_iterator)
-            self.greedy_decoding(batch_dict, lang)
+            #self.greedy_decoding(batch_dict, lang)
+            self.output_samples(batch_dict, lang, lang)
 
 if __name__ == "__main__":
 
-    logger = create_logger("logs/sanity_check.log")
+    logger = create_logger("logs/en_language_model.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     model = Transformer(data_params=data_params, logger=logger, init_emb=False)
     trainer = LanguageModeling(model)
 
-    trainer.train(30000)
+    trainer.train(3000)
     trainer.save_model("en_language_model.pth")
     logger.info("testing trained model")
     trainer.test(10)

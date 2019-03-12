@@ -14,6 +14,8 @@ class Trainer(ABC):
 
         super().__init__()
         self.transformer = transformer
+        self.encode = transformer.encode
+        self.decode = transformer.decode
         self.logger = transformer.logger
 
         if torch.cuda.is_available() and not parallel:
@@ -167,8 +169,13 @@ class Trainer(ABC):
                     src_batch = tgt_batch
                     src_l = tgt_l
 
+                # does not create new tensor, input to the decoder during training, without eos token
+                prev_output = tgt_batch[:, :-1]
+                tgt_batch = tgt_batch[:, 1:]
+
                 src_mask = self.get_src_mask(src_batch)
-                tgt_mask = self.get_tgt_mask(tgt_batch)
+                # create mask based on input to the decoder
+                tgt_mask = self.get_tgt_mask(prev_output)
 
                 # move to cuda
                 tgt_batch = tgt_batch.to(self.device)
@@ -179,8 +186,9 @@ class Trainer(ABC):
                 tgt_l = tgt_l.to(self.device)
 
                 yield {"src_batch": src_batch,
-                       "tgt_batch":tgt_batch,
-                       "src_mask":src_mask,
+                       "tgt_batch": tgt_batch,
+                       "prev_output": prev_output,
+                       "src_mask": src_mask,
                        "tgt_mask": tgt_mask,
                        "src_l": src_l,
                        "tgt_l": tgt_l}
@@ -225,6 +233,8 @@ class Trainer(ABC):
 
                 # does not create new tensor
                 prev_output = tgt_batch[:, :-1]
+                tgt_batch = tgt_batch[:, 1:]
+
                 src_mask = self.get_src_mask(src_batch)
                 tgt_mask = self.get_tgt_mask(prev_output)
 
@@ -245,6 +255,42 @@ class Trainer(ABC):
                        "tgt_l": tgt_l}
 
         return iterator
+
+    def output_samples(self, batch_dict, lang1, lang2):
+
+        tgt_mask = batch_dict["tgt_mask"]
+        tgt_batch = batch_dict["tgt_batch"]
+        src_mask = batch_dict["src_mask"]
+        src_batch = batch_dict["src_batch"]
+        prev_output = batch_dict["prev_output"]
+
+        if tgt_batch.shape[0] > 1:
+            tgt_batch = tgt_batch[0, :].unsqueeze(0)
+            src_batch = src_batch[0, :].unsqueeze(0)
+            src_mask = src_mask[0, :].unsqueeze(0)
+
+        output_seq = self.transformer(input_seq=src_batch,
+                                      prev_output=prev_output,
+                                      src_mask=src_mask,
+                                      tgt_mask=tgt_mask,
+                                      src_lang=lang1,
+                                      tgt_lang=lang1)
+
+        loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+        print("loss", loss)
+
+        scores = F.softmax(output_seq, dim=-1)
+        max_score, indices = torch.max(scores, -1)
+        print(indices)
+        words = [self.data['dico'][self.id2lang[lang2]][indices[:, i].item()] for i in range(indices.size(1))]
+        print("output", words)
+
+        input_sent = []
+        for i in range(src_batch.size(1)):
+            idx = src_batch[:, i].item()
+            input_sent.append(self.data['dico'][self.id2lang[lang1]][idx])
+
+        print("input ", input_sent)
 
     def save_model(self, path):
         torch.save(self.transformer.state_dict(), path)
