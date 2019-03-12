@@ -268,6 +268,7 @@ class Trainer(ABC):
             tgt_batch = tgt_batch[0, :].unsqueeze(0)
             src_batch = src_batch[0, :].unsqueeze(0)
             src_mask = src_mask[0, :].unsqueeze(0)
+            prev_output = prev_output[0, :].unsqueeze(0)
 
         output_seq = self.transformer(input_seq=src_batch,
                                       prev_output=prev_output,
