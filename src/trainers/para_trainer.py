@@ -71,7 +71,7 @@ class ParallelTrainer(Trainer):
 
             word_count += 1
             dec_input = prev_output[:, :word_count]
-            print("dec input ", dec_input)
+            self.logger.info("dec input ", dec_input)
             dec_logits = self.decode(prev_output=dec_input,
                                      latent_seq=latent_code,
                                      src_mask=src_mask,
@@ -80,22 +80,22 @@ class ParallelTrainer(Trainer):
 
             scores = F.softmax(dec_logits, dim=-1)
             max_score, index = torch.max(scores[:, -1], -1)
-            print("index", index)
+            self.logger.info("index", index)
 
             #prev_output[:, word_count] = index.item()
             prev_token = prev_output[:, word_count].item()
             word = self.data['dico'][self.id2lang[lang2]][index.item()]
             out.append(word)
-            print("output word", word)
-            print("GT word", tgt_batch[:, word_count])
+            self.logger.info("output word", word)
+            self.logger.info("GT word", tgt_batch[:, word_count])
 
-        print("output", out)
+        self.logger.info("output", out)
         input = []
         for i in range(src_batch.size(1)):
             idx = src_batch[:, i].item()
             input.append(self.data['dico'][self.id2lang[lang1]][idx])
 
-        print("input ", input)
+        self.logger.info("input ", input)
 
     def train(self, n_iter):
 
@@ -146,7 +146,7 @@ class ParallelTrainer(Trainer):
             #self.greedy_decoding(batch_dict, lang1, lang2)
             self.output_samples(batch_dict, lang1, lang2)
             loss = self.translation_loss(batch_dict, lang1, lang2)
-            print("translation loss", loss)
+            self.logger.info("translation loss", loss)
 
 
 if __name__ == "__main__":
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     # print("tgt_mask", tgt_mask)
     # print("tgt_batch", tgt_batch)
 
-    trainer.train(15000)
+    trainer.train(10000)
     trainer.save_model("en_fr.pth")
     logger.info("testing trained model")
     trainer.test(10)

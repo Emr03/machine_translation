@@ -279,20 +279,20 @@ class Trainer(ABC):
                                       tgt_lang=lang2)
 
         loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
-        print("loss", loss)
+        self.logger.info("loss", loss)
 
         scores = F.softmax(output_seq, dim=-1)
         max_score, indices = torch.max(scores, -1)
         #print(indices)
         words = [self.data['dico'][self.id2lang[lang2]][indices[:, i].item()] for i in range(indices.size(1))]
-        print("output", words)
+        self.logger.info("output", words)
 
         input_sent = []
         for i in range(src_batch.size(1)):
             idx = src_batch[:, i].item()
             input_sent.append(self.data['dico'][self.id2lang[lang1]][idx])
 
-        print("input ", input_sent)
+        self.logger.info("input ", input_sent)
 
     def save_model(self, path):
         torch.save(self.transformer.state_dict(), path)
