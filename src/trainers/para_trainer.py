@@ -156,11 +156,10 @@ if __name__ == "__main__":
     print("tgt_mask", tgt_mask)
     print("tgt_batch", tgt_batch)
 
-    # trainer.train(3000)
-    # trainer.save_model("en_fr.pth")
-    # logger.info("testing trained model")
-    # trainer.test(10)
+    #trainer.train(3000)
+    #trainer.save_model("en_fr.pth")
+    #logger.info("testing trained model")
+    #trainer.test(10)
     logger.info("testing loaded model")
     trainer.load_model("en_fr.pth")
-
     trainer.test(10)
