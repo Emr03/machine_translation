@@ -86,7 +86,8 @@ class Transformer(torch.nn.Module):
 
     def decode(self, prev_output, latent_seq, src_mask, tgt_mask, tgt_lang):
 
-        return self.decoder(prev_output, latent_seq, src_mask=src_mask, tgt_mask=tgt_mask, lang_id=tgt_lang)
+        dec_output = self.decoder(prev_output, latent_seq, src_mask=src_mask, tgt_mask=tgt_mask, lang_id=tgt_lang)
+        return self.linear_layers[tgt_lang](dec_output)
 
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 

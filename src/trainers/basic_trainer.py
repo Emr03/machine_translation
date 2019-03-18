@@ -256,7 +256,136 @@ class Trainer(ABC):
 
         return iterator
 
+    def get_back_para_iterator(self, lang1, lang2, add_noise=False):
+        """
+        returns training batches to back-translate from lang1 to lang2
+        :param lang1:
+        :param lang2:
+        :param train:
+        :param add_noise:
+        :return:
+        """
+
+        src_lang = self.id2lang[lang1]
+        tgt_lang = self.id2lang[lang2]
+
+        assert (self.data['back_para'][(src_lang, tgt_lang)]['train'] is not None)
+        get_iterator = self.data['back_para'][(src_lang, tgt_lang)]['train'].get_iterator(shuffle=True, group_by_size=True)
+
+        batch_iterator = get_iterator()
+
+        def iterator():
+
+            for src, tgt in batch_iterator:
+
+                src_batch, src_l = src
+                tgt_batch, tgt_l = tgt
+
+                tgt_batch.transpose_(0, 1)
+                src_batch.transpose_(0, 1)
+
+                if add_noise:
+                    src_batch, src_l = self.noise_model.add_noise(src_batch, src_l, lang1)
+
+                # does not create new tensor
+                prev_output = tgt_batch[:, :-1]
+                tgt_batch = tgt_batch[:, 1:]
+
+                src_mask = self.get_src_mask(src_batch)
+                tgt_mask = self.get_tgt_mask(prev_output)
+
+                # move to cuda
+                tgt_batch = tgt_batch.to(self.device)
+                src_batch = src_batch.to(self.device)
+                src_mask = src_mask.to(self.device)
+                tgt_mask = tgt_mask.to(self.device)
+                src_l = src_l.to(self.device)
+                tgt_l = tgt_l.to(self.device)
+
+                yield {"src_batch": src_batch,
+                       "tgt_batch": tgt_batch,
+                       "prev_output": prev_output,
+                       "src_mask": src_mask,
+                       "tgt_mask": tgt_mask,
+                       "src_l": src_l,
+                       "tgt_l": tgt_l}
+
+        return iterator
+
+    def greedy_decoding(self, batch_dict, lang1, lang2):
+        """
+        testing method, examine output under slightly different conditions from training
+        :param batch_dict:
+        :param lang1:
+        :param lang2:
+        :return:
+        """
+        tgt_batch = batch_dict["tgt_batch"]
+        src_mask = batch_dict["src_mask"]
+        src_batch = batch_dict["src_batch"]
+
+        if tgt_batch.shape[0] > 1:
+            tgt_batch = tgt_batch[0, :].unsqueeze(0)
+            src_batch = src_batch[0, :].unsqueeze(0)
+            src_mask = src_mask[0, :].unsqueeze(0)
+
+        print(tgt_batch.shape)
+
+        latent_code = self.encode(input_seq=src_batch,
+                                  src_mask=src_mask,
+                                  src_lang=lang1)
+
+        #prev_output = torch.ones(1, self.max_len, dtype=torch.int64) * self.pad_index
+        #prev_output[:, 0] = self.bos_index
+        #prev_token = self.bos_index
+
+        prev_output = batch_dict["prev_output"]
+        prev_output = prev_output.to(self.device)
+        prev_token = prev_output[:, 0]
+
+        out = []
+
+        word_count = 0
+
+        while prev_token is not self.eos_index and word_count < self.max_len - 1:
+
+            word_count += 1
+            dec_input = prev_output[:, :word_count]
+            self.logger.info("dec input ", dec_input)
+            dec_logits = self.decode(prev_output=dec_input,
+                                     latent_seq=latent_code,
+                                     src_mask=src_mask,
+                                     tgt_mask=None,
+                                     tgt_lang=lang2)
+
+            scores = F.softmax(dec_logits, dim=-1)
+            max_score, index = torch.max(scores[:, -1], -1)
+            self.logger.info("index", index)
+
+            #prev_output[:, word_count] = index.item()
+            prev_token = prev_output[:, word_count].item()
+            word = self.data['dico'][self.id2lang[lang2]][index.item()]
+            out.append(word)
+            self.logger.info("output word", word)
+            self.logger.info("GT word", tgt_batch[:, word_count])
+
+        self.logger.info("output", out)
+        input = []
+        for i in range(src_batch.size(1)):
+            idx = src_batch[:, i].item()
+            input.append(self.data['dico'][self.id2lang[lang1]][idx])
+
+        self.logger.info("input ", input)
+
+
     def output_samples(self, batch_dict, lang1, lang2):
+        """
+        testing method, used to check outputs under teacher forcing
+        :param batch_dict:
+        :param lang1:
+        :param lang2:
+        :return:
+        """
 
         tgt_mask = batch_dict["tgt_mask"]
         tgt_batch = batch_dict["tgt_batch"]

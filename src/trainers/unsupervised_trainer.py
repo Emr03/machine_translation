@@ -1,161 +1,162 @@
-import torch
+from src.logger import create_logger
 import torch.nn.functional as F
+import torch.cuda
 import numpy as np
-from .transformer import Transformer
-from .noise_model import NoiseModel
-from .data_loading import get_parser
-from .data.dataset import *
-from .data.loader import *
+from src.transformer import Transformer
+from src.noise_model import NoiseModel
+from src.data_loading import get_parser
+from src.data.dataset import *
+from src.data.loader import *
+from .basic_trainer import Trainer
 
-class Trainer:
+class UnsupervisedTrainer(Trainer):
 
     def __init__(self, transformer):
 
-        self.transformer = transformer
-        self.data = transformer.data
-        self.data_params = transformer.data_params
-        self.noise_model = NoiseModel(data=self.data, params=self.data_params)
-        self.max_len = 100
+        super().__init__(transformer)
 
-        self.pad_index = transformer.pad_index
-        self.eos_index = transformer.eos_index
-        self.bos_index = transformer.bos_index
+    def reconstruction_loss(self, batch_dict, lang1, lang2):
 
-    def get_src_mask(self, src_batch):
-        mask = torch.ones_like(src_batch)
-        mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
-        #print("mask", mask)
-        return mask
-
-    def get_tgt_mask(self, tgt_batch):
-
-        batch_size, sent_len = tgt_batch.shape
-
-        # hide future words
-        tgt_m = np.tril(np.ones((batch_size, sent_len, sent_len)), k=0).astype(np.uint8)
-        #print("tgt_m", tgt_m)
-
-        tgt_m = torch.from_numpy(tgt_m)
-
-        # hide padding
-        tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.pad_index, 0).unsqueeze_(1)
-        #print("tgt_m", tgt_m)
-        return tgt_m
-
-    def reconstruction_loss(self, src_batch, lengths, lang, noise=True):
-
-        tgt_mask = self.get_tgt_mask(src_batch)
-        tgt_batch = torch.copy_(src_batch)
-
-        if noise:
-            src_batch, new_len = self.noise_model.add_noise(src_batch, lengths, lang)
-
-        src_mask = self.get_src_mask(src_batch)
+        tgt_mask = batch_dict["tgt_mask"]
+        tgt_batch = batch_dict["tgt_batch"]
+        src_mask = batch_dict["src_mask"]
+        src_batch = batch_dict["src_batch"]
+        prev_output = batch_dict["prev_output"]
 
         output_seq = self.transformer(input_seq=src_batch,
-                                  prev_output=tgt_batch,
-                                  src_mask=src_mask,
-                                  tgt_mask=tgt_mask,
-                                  src_lang=lang,
-                                  tgt_lang=lang)
-
-        return F.cross_entropy(input=torch.flatten(output_seq, 0, 1),
-                               target=torch.flatten(src_batch))
-
-    def back_translation_loss(self, src_batch, lengths, tgt_batch, src_lang, tgt_lang, noise=True):
-
-        if noise:
-            corr_translations = self.noise_model.add_noise(src_batch, lengths=lengths, lang_id=src_lang)
-
-        else:
-            corr_translations = src_batch
-
-        # compute back-translation
-        back_translations = self.translate(src_batch=corr_translations,
-                                           tgt_batch=tgt_batch,
-                                           src_lang=src_lang,
-                                           tgt_lang=tgt_lang,
-                                           beam_size=1)
-
-        # compute loss
-        return F.cross_entropy(input=torch.flatten(back_translations, 0, 1),
-                               target=torch.flatten(src_batch))
-
-    def translate(self, src_batch, tgt_batch, src_lang, tgt_lang, beam_size, teacher_force=False):
-
-        batch_size = src_batch.size(0)
-        if tgt_batch is None:
-            tgt_batch = src_batch.new_full(size=(batch_size, self.max_len), fill_value=self.pad_index)
-            tgt_batch[:, 0] = self.bos_index
-
-        tgt_mask = self.get_tgt_mask(tgt_batch)
-        src_mask = self.get_src_mask(src_batch)
-
-        if teacher_force:
-            output = self.transformer(input_seq=src_batch,
-                                      prev_output=tgt_batch,
+                                      prev_output=prev_output,
                                       src_mask=src_mask,
                                       tgt_mask=tgt_mask,
-                                      src_lang=src_lang,
-                                      tgt_lang=tgt_lang)
+                                      src_lang=lang1,
+                                      tgt_lang=lang2)
 
-            #return F.softmax(output, dim=-1)
+        return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
-        else:
-            enc_out = self.transformer.encode(input_seq=src_batch,
-                                              src_mask=src_mask,
-                                              src_lang=src_lang)
+    def train(self, n_iter):
 
-            self.beam_search(beam_size, enc_out, src_mask, tgt_lang)
+        lang1 = 0
+        lang2 = 1
+        logger.info("Training translation model for %s , %s " % (self.id2lang[lang1], self.id2lang[lang2]))
 
-    def beam_search(self, beam_size, encoder_outputs, src_mask, tgt_lang):
+        get_back_para_iterators = [self.get_back_para_iterator(lang1=lang1, lang2=lang2, add_noise=False),
+                                   self.get_back_para_iterator(lang1=lang2, lang2=lang1, add_noise=False)]
 
-        batch_size = encoder_outputs.size(0)
-        last_token = self.bos_index
-        hypotheses = torch.zeros(size=(batch_size, beam_size, self.max_len), dtype=torch.int64)
-        hypotheses[:, :, 1:] = self.pad_index
-        hypotheses[:, :, 0] = self.bos_index
+        get_lm_iterators = [self.get_lm_iterator(lang=lang1, add_noise=True),
+                            self.get_lm_iterator(lang=lang2, add_noise=True)]
 
-        encoder_outputs = encoder_outputs.unsqueeze_(1).expand(-1, beam_size, -1, -1)
-        print("encoder_outputs", encoder_outputs)
+        back_para_iterators = [get_iter() for get_iter in get_back_para_iterators]
+        lm_iterators = [get_iter() for get_iter in get_lm_iterators]
 
-        for sent in range(batch_size):
-            prev_token = self.bos_index
-            curr_len = 1
-            while prev_token is not self.eos_index:
+        for i in range(n_iter):
 
-                tgt_mask = self.get_tgt_mask(hypotheses[sent, :, :])
-                out = self.transformer.decode(prev_output=hypotheses[sent, :, :],
-                                        latent_seq=encoder_outputs[sent],
-                                        src_mask=src_mask[sent],
-                                        tgt_mask=tgt_mask,
-                                        tgt_lang=tgt_lang)
+            self.opt.zero_grad()
 
-                print("out", out)
+            try:
+                lang1_batch_dict = next(lm_iterators[0])
 
-                scores = F.softmax(out, dim=-1)
-                scores.topk(beam_size, dim=-1, largest=True, sorted=True)
-                print("scores", scores)
+            except StopIteration:
+                # restart the iterator
+                get_lm_iterators[0] = self.get_lm_iterator(lang=lang1, add_noise=True)
+                lm_iterators[0] = get_lm_iterators[0]()
+                lang_batch_dict = next(lm_iterators[0])
 
-                # use embedding layer of decoder to map output indices back to word embeddings
+            # get lm loss for lang 1
+            loss = self.reconstruction_loss(batch_dict=lang_batch_dict, lang1=lang1, lang2=lang1)
+
+            try:
+                lang_batch_dict = next(lm_iterators[1])
+
+            except StopIteration:
+                # restart the iterator
+                get_lm_iterators[1] = self.get_lm_iterator(lang=lang1, add_noise=True)
+                lm_iterators[1] = get_lm_iterators[1]()
+                lang_batch_dict = next(lm_iterators[1])
+
+            # get lm loss for lang 2
+            loss += self.reconstruction_loss(batch_dict=lang_batch_dict, lang1=lang2, lang2=lang2)
+
+            try:
+                para_batch_dict = next(back_para_iterators[0])
+
+            except StopIteration:
+                # restart the iterator
+                get_back_para_iterators[0] = self.get_back_para_iterator(lang1=lang1, lang2=lang2, add_noise=False)
+                back_para_iterators[0] = get_back_para_iterators[0]()
+                para_batch_dict = next(back_para_iterators[0])
+
+            loss += self.reconstruction_loss(batch_dict=para_batch_dict, lang1=lang1, lang2=lang2)
+
+            try:
+                para_batch_dict = next(back_para_iterators[1])
+
+            except StopIteration:
+                # restart the iterator
+                get_back_para_iterators[1] = self.get_back_para_iterator(lang1=lang2, lang2=lang1, add_noise=False)
+                back_para_iterators[1] = get_back_para_iterators[1]()
+                para_batch_dict = next(back_para_iterators[1])
+
+            loss += self.reconstruction_loss(batch_dict=para_batch_dict, lang1=lang2, lang2=lang1)
+
+            try:
+
+                if i % 50 == 0:
+                    # print("iter ", i, "loss: ", loss)
+                    self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+
+                loss.backward()
+                self.opt_step()
+
+            except Exception as e:
+                self.logger.debug("Exception in training loop")
+                self.logger.debug(e.message)
+
+    def generate_parallel(self, src_lang, tgt_lang):
+        pass 
 
 
+    def test(self, n_tests):
+        self.transformer.eval()
+        lang1 = 0
+        lang2 = 1
+        get_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=False)
+        train_iterator = get_iterator()
+        for i in range(n_tests):
+            batch_dict = next(train_iterator)
+            # self.greedy_decoding(batch_dict, lang1, lang2)
+            self.output_samples(batch_dict, lang1, lang2)
+            loss = self.translation_loss(batch_dict, lang1, lang2)
+            self.logger.info("translation loss", loss)
 
-        
 
+if __name__ == "__main__":
+    logger = create_logger("logs/para_trainer.log")
+    parser = get_parser()
+    data_params = parser.parse_args()
+    check_all_data_params(data_params)
+    model = Transformer(data_params=data_params, logger=logger,
+                        init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec")
 
-    def train_loop(self, train_iter):
-        pass
+    trainer = UnsupervisedTrainer(model)
+    # test iterator
+    # get_iter = trainer.get_para_iterator(lang1=0, lang2=1, train=False, add_noise=False)
+    # iter = get_iter()
 
-    def get_batch(self, lang):
+    # batch_dict = next(iter)
+    # prev_output = batch_dict["prev_output"]
+    # tgt_mask = batch_dict["tgt_mask"]
+    # tgt_batch = batch_dict["tgt_batch"]
+    #
+    # print("prev_output", prev_output)
+    # print("tgt_mask", tgt_mask)
+    # print("tgt_batch", tgt_batch)
 
-        get_iterator = self.transformer.train_iterators[lang]
-        iterator = get_iterator()
-
-        batch, l = next(iterator)
-        # print(batch, l)
-        batch = batch.transpose_(0, 1)
-        return batch, l
+    trainer.train(10000)
+    trainer.save_model("en_fr.pth")
+    logger.info("testing trained model")
+    trainer.test(10)
+    logger.info("testing loaded model")
+    trainer.load_model("en_fr.pth")
+    trainer.test(10)
 
 if __name__ == "__main__":
 
