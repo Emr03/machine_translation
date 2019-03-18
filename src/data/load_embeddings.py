@@ -13,6 +13,7 @@ import os
 import sys
 import numpy as np
 import torch
+from .dictionary import *
 
 logger = getLogger()
 
@@ -20,8 +21,6 @@ def reload_pth_emb(path, dim):
     """
     Reload pretrained embeddings from a PyTorch binary file.
     """
-    from .data import dictionary
-    sys.modules['src.data.dictionary'] = dictionary
     logger.info("Reloading embeddings from %s ..." % path)
     data = torch.load(path)
     vectors = data['vectors']

@@ -1,4 +1,4 @@
-from .data.loader import *
+from src.data.loader import *
 import argparse
 
 def get_parser():

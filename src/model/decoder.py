@@ -1,7 +1,7 @@
-import torch
 import math
-import numpy as np
-from .sublayers import *
+
+from src.model.sublayers import *
+
 
 class DecoderLayer(torch.nn.Module):
 
@@ -78,7 +78,7 @@ class StackedDecoder(torch.nn.Module):
         return dec_outputs
 
 if __name__ == "__main__":
-    from src.config import params
+    from src.utils.config import params
     # test decoder layer
     x = torch.zeros(20, 5, 512, dtype=torch.float32)
     tgt_m = torch.zeros(1, 5)

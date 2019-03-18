@@ -1,14 +1,13 @@
-from src.logger import create_logger
-import torch.nn.functional as F
 import torch.cuda
-import numpy as np
-from src.transformer import Transformer
-from src.noise_model import NoiseModel
-from src.data_loading import get_parser
+import torch.nn.functional as F
+
 from src.data.dataset import *
 from src.data.loader import *
+from src.model.transformer import Transformer
+from src.utils.data_loading import get_parser
+from src.utils.logger import create_logger
 from .basic_trainer import Trainer
-import logging
+
 
 class LanguageModeling(Trainer):
 

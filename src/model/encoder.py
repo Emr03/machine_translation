@@ -1,7 +1,9 @@
-import torch
-import numpy as np
 import math
-from .sublayers import *
+from src.model.sublayers import *
+import math
+
+from src.model.sublayers import *
+
 
 class EncoderLayer(torch.nn.Module):
 
@@ -70,7 +72,7 @@ class StackedEncoder(torch.nn.Module):
 
 if __name__ == "__main__":
 
-    from src.config import params
+    from src.utils.config import params
     # test encoder layer
     x = torch.zeros(20, 5, 512)
     m = torch.zeros(20, 5).unsqueeze(-2).unsqueeze(-2)

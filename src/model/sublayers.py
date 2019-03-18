@@ -1,7 +1,8 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
 from matplotlib import pyplot as plt
+
 
 class PositionalEncoding(torch.nn.Module):
     """
@@ -35,7 +36,9 @@ class PositionalEncoding(torch.nn.Module):
         """
         len = x.shape[1]
         batch_size = x.shape[0]
+        print(batch_size)
         t = self.pe[0:len, :]
+        print(t.shape)
         return self.dropout(x + t)
 
     def visualize(self):
@@ -64,7 +67,7 @@ class SelfAttention(torch.nn.Module):
         self.d_k = params["d_k"]
         self.heads = params["h"]
 
-        # compute queries, keys and values for all attention h, eads in parallel
+        # compute queries, keys and values for all attention heads in parallel
         self.W_q = torch.nn.Linear(self.d_model, self.d_model, bias=False)
         self.W_k = torch.nn.Linear(self.d_model, self.d_model, bias=False)
         self.W_v = torch.nn.Linear(self.d_model, self.d_model, bias=False)
@@ -107,10 +110,46 @@ class SelfAttention(torch.nn.Module):
         #print(attention.shape)
         return attention
 
+class VariationalAttention(torch.nn.Module):
+    """
+    Implements variational attention,
+    where the mean is computed using deterministic attention,
+    the variance is computed with linear + tanh + linear layer + exp activation, or softplus
+    """
+
+    def __init__(self, params):
+        super(VariationalAttention, self).__init__()
+        self.d_model = params["d_model"]
+        self.d_k = params["d_k"]
+        self.heads = params["h"]
+
+        self.det_attn = SelfAttention(params)
+
+        self.compute_sigma = torch.nn.Sequential([torch.nn.Linear(self.d_model, self.d_model),
+                                                  torch.nn.Tanh(),
+                                                  torch.nn.Linear(self.d_model, self.d_model),
+                                                  torch.nn.Softplus()])
+
+    def forward(self, x_q, x_k, x_v, mask=None, n_samples=1):
+
+        # shape = batch_size, len, d_model
+        a_det = self.det_attn(x_q, x_k, x_v, mask)
+
+        # compute sigma, assume diagonal for now, shape = batch_size, len, d_model
+        # TODO: make diagonal matrix
+        sigma = torch.diag(self.compute_sigma(a_det))
+
+        return z
+
+    def sample(self, n_samples):
+        
+        # sample latent code
+        z = torch.distributions.MultivariateNormal(loc=a_det, covariance_matrix=sigma)
+
 
 if __name__ == "__main__":
 
-    from src.config import params
+    from src.utils.config import params
     # test self-attention
     att = SelfAttention(params)
     x = torch.ones(3, 5, 512, dtype=torch.float32)

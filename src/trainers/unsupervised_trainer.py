@@ -1,13 +1,10 @@
-from src.logger import create_logger
-import torch.nn.functional as F
-import torch.cuda
-import numpy as np
-from src.transformer import Transformer
-from src.noise_model import NoiseModel
-from src.data_loading import get_parser
 from src.data.dataset import *
 from src.data.loader import *
+from src.model.transformer import Transformer
+from src.utils.data_loading import get_parser
+from src.utils.logger import create_logger
 from .basic_trainer import Trainer
+
 
 class UnsupervisedTrainer(Trainer):
 
@@ -110,9 +107,58 @@ class UnsupervisedTrainer(Trainer):
                 self.logger.debug("Exception in training loop")
                 self.logger.debug(e.message)
 
-    def generate_parallel(self, src_lang, tgt_lang):
-        pass 
+    def generate_parallel(self, batch_dict, src_lang, tgt_lang):
+        """
+        generate sentences for back-translation using greedy decoding
+        :param src_lang:
+        :param tgt_lang:
+        :return:
+        """
 
+        tgt_batch = batch_dict["tgt_batch"]
+        src_mask = batch_dict["src_mask"]
+        src_batch = batch_dict["src_batch"]
+
+        batch_size = tgt_batch.shape[0]
+
+        latent_code = self.encode(input_seq=src_batch,
+                                  src_mask=src_mask,
+                                  src_lang=src_lang)
+
+        prev_output = torch.ones(batch_size, self.max_len, dtype=torch.int64) * self.pad_index
+        prev_output[:, 0] = self.bos_index
+        prev_output = prev_output.to(self.device)
+
+        prev_token = prev_output[:, 0]
+
+        while prev_token is not self.eos_index and word_count < self.max_len - 1:
+            word_count += 1
+            dec_input = prev_output[:, :word_count]
+            self.logger.info("dec input ", dec_input)
+            dec_logits = self.decode(prev_output=dec_input,
+                                     latent_seq=latent_code,
+                                     src_mask=src_mask,
+                                     tgt_mask=None,
+                                     tgt_lang=lang2)
+
+            scores = F.softmax(dec_logits, dim=-1)
+            max_score, index = torch.max(scores[:, -1], -1)
+            self.logger.info("index", index)
+
+            # prev_output[:, word_count] = index.item()
+            prev_token = prev_output[:, word_count].item()
+            word = self.data['dico'][self.id2lang[lang2]][index.item()]
+            out.append(word)
+            self.logger.info("output word", word)
+            self.logger.info("GT word", tgt_batch[:, word_count])
+
+        self.logger.info("output", out)
+        input = []
+        for i in range(src_batch.size(1)):
+            idx = src_batch[:, i].item()
+            input.append(self.data['dico'][self.id2lang[lang1]][idx])
+
+        self.logger.info("input ", input)
 
     def test(self, n_tests):
         self.transformer.eval()

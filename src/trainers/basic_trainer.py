@@ -1,12 +1,12 @@
-import torch.nn.functional as F
+from abc import ABC, abstractmethod
+
 import torch.nn as nn
-import numpy as np
-from src.transformer import Transformer
-from src.noise_model import NoiseModel
-from src.data_loading import get_parser
+import torch.nn.functional as F
+
 from src.data.dataset import *
 from src.data.loader import *
-from abc import ABC, abstractmethod
+from src.model.noise_model import NoiseModel
+
 
 class Trainer(ABC):
 

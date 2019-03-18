@@ -1,17 +1,13 @@
-from .config import params
-from .encoder import *
-from .decoder import *
-from .sublayers import *
-from .noise_model import *
-from .data.loader import *
-from .data_loading import get_parser
-from .data.dataset import *
-from .pretrain_embeddings import *
+from src.model.decoder import *
+from src.model.encoder import *
+from src.model.noise_model import *
+from src.data.load_embeddings import *
 
 
 class Transformer(torch.nn.Module):
 
-    def __init__(self, data_params, logger,  embd_file=None, init_emb=True, is_shared_emb=True):
+    def __init__(self, data_params, logger,
+                 embd_file=None, init_emb=True, is_shared_emb=True, is_variational=False):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -62,6 +58,10 @@ class Transformer(torch.nn.Module):
         else:
             self.linear_layers = torch.nn.ModuleList([torch.nn.Linear(self.d_model, self.vocab_size[l]) for l in range(self.n_langs)])
 
+        if is_variational:
+            self.sigma_layer = torch.nn.Linear(self.d_model, self.d_model)
+            # TODO: variational attention
+
         def init_weights(m):
 
             if type(m) == torch.nn.Linear:
@@ -92,6 +92,11 @@ class Transformer(torch.nn.Module):
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
         latent = self.encode(input_seq, src_mask, src_lang)
+
+        if is_variational:
+
+            sigma =
+            z = latent +
 
         dec_outputs = self.decode(prev_output=prev_output,
                                   latent_seq=latent,
@@ -211,15 +216,12 @@ class Transformer(torch.nn.Module):
 if __name__ == "__main__":
     # test transformer
 
-    # x = torch.zeros(20, 5, dtype=torch.int64)
-    # y = torch.zeros(20, 7, dtype=torch.int64)
-    # tgt_m = np.tril(np.ones((1, 7, 7)), k=0).astype(np.uint8)
-    # tgt_m = torch.from_numpy(tgt_m)
-    #
-    # src_m = torch.zeros(20, 5).unsqueeze(-2).unsqueeze(-2)
+    x = torch.zeros(20, 5, dtype=torch.int64)
+    y = torch.zeros(20, 7, dtype=torch.int64)
+    tgt_m = np.tril(np.ones((1, 7, 7)), k=0).astype(np.uint8)
+    tgt_m = torch.from_numpy(tgt_m)
 
-    # out = model(input_seq=x, prev_output=y, src_mask=src_m, tgt_mask=tgt_m, src_lang=1, tgt_lang=0)
-    # print(out.shape)
+    src_m = torch.zeros(20, 5).unsqueeze(-2).unsqueeze(-2)
 
     # test lm_loss
     # x = torch.ones(2, 5, dtype=torch.int64)
