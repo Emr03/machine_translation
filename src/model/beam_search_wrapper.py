@@ -47,7 +47,7 @@ class MyBeamSearch:
 
         for step in range(self.max_length):
             # TODO: make beam object, verify implementation
-            decoder_in = self.beam.current_predictions.view(1, -1, 1)
+            decoder_in = self.beamSearch.current_predictions.view(1, -1, 1)
 
             #pass in stuff to decoder, get log probabilities back
             dec_output = decoder(decoder_in, enc_out, src_mask, tgt_mask=None,
@@ -55,17 +55,17 @@ class MyBeamSearch:
 
             log_probs = torch.log(dec_output)
             #attention is only used for coverage penalty, which we're not using
-            self.beam.advance(log_probs, None)
+            self.beamSearch.advance(log_probs, None)
 
             #checks if any beam is finished, then updates state.
             any_beam_is_finished = self.beam.is_finished.any()
             if any_beam_is_finished:
-                self.beam.update_finished()
+                self.beamSearch.update_finished()
                 #done if all beams are finished
-                if self.beam.done:
+                if self.beamSearch.done:
                     break
 
-        return self.beam.hypotheses
+        return self.beamSearch.hypotheses
 
 if __name__ == "__main__":
 
