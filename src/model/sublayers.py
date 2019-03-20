@@ -125,27 +125,37 @@ class VariationalAttention(torch.nn.Module):
 
         self.det_attn = SelfAttention(params)
 
-        self.compute_sigma = torch.nn.Sequential([torch.nn.Linear(self.d_model, self.d_model),
+        # compute sigma, assume diagonal for now, shape = batch_size, len, d_model
+        self.compute_sigma = torch.nn.Sequential(torch.nn.Linear(self.d_model, self.d_model),
                                                   torch.nn.Tanh(),
                                                   torch.nn.Linear(self.d_model, self.d_model),
-                                                  torch.nn.Softplus()])
+                                                  torch.nn.Softplus())
 
     def forward(self, x_q, x_k, x_v, mask=None, n_samples=1):
 
         # shape = batch_size, len, d_model
         a_det = self.det_attn(x_q, x_k, x_v, mask)
+        print("a_det", a_det.shape)
 
-        # compute sigma, assume diagonal for now, shape = batch_size, len, d_model
-        # TODO: make diagonal matrix
-        sigma = torch.diag(self.compute_sigma(a_det))
+        # make sigma a diagonal matrix of shape batch size, seq len, dim, dim
+        sigma = self.compute_sigma(a_det)
+        sigma = sigma.unsqueeze(-1).expand(*sigma.size(), self.d_model)
+        sigma = sigma*torch.eye(self.d_model)
+        print("sigma", sigma.shape)
+
+        z = self.sample(a_det=a_det, sigma=sigma, n_samples=n_samples)
 
         return z
 
-    def sample(self, n_samples):
+    def sample(self, a_det, sigma, n_samples):
         
         # sample latent code
+        # shape = n_samples, batch_size, len, d_model
         z = torch.distributions.MultivariateNormal(loc=a_det, covariance_matrix=sigma)
 
+        # samples z using reparameterization trick, the gradient will be propagated back
+        return z.rsample(sample_shape=torch.Size([n_samples]))
+        #return z.sample_n(n_samples)
 
 if __name__ == "__main__":
 
@@ -165,6 +175,16 @@ if __name__ == "__main__":
     print("mask ", mask.shape)
     out = att(x, x, x, mask=mask)
     print(out)
+
+    # test variational attention
+    att = VariationalAttention(params)
+    x = torch.ones(3, 5, 512, dtype=torch.float32)
+    a = att(x, x, x, n_samples=2)
+    print('a', a.shape)
+
+    # test self-attention with masking
+    mask = np.tril(np.ones((3, 5, 5)), k=0).astype(np.uint8)
+    mask = torch.from_numpy(mask).unsqueeze_(1)
 
     # test pos_encoding
     enc = PositionalEncoding(params)
