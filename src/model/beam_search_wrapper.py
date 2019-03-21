@@ -1,8 +1,7 @@
-from src.model.decoder import *
-from src.model.encoder import *
+from src.model.transformer import *
 from src.onmt.translate.beam import *
 from src.onmt.translate.beam_search import BeamSearch
-
+from src.utils.logger import *
 
 class MyBeamSearch:
     '''
@@ -65,7 +64,7 @@ class MyBeamSearch:
                 if self.beamSearch.done:
                     break
 
-            #pass in stuff to decoder, get log probabilities back
+            #pass in stuff to decoder, get log probabilities and new decoder states back
             dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
                                  lang_id=self.tgt_lang_id)
 
@@ -78,16 +77,18 @@ class MyBeamSearch:
 if __name__ == "__main__":
 
     from src.utils.config import params
-
+    #batch_size x seq_len
     x = torch.zeros(2, 5, dtype=torch.int64)
 
     src_m = torch.ones(2, 5)
     src_m[:, -2:-1] = 0
     src_m = src_m.unsqueeze(-2).unsqueeze(-2)
     #print(src_m.shape)
+    parser = get_parser()
+    data_params = parser.parse_args()
+    check_all_data_params(data_params)
+    transformer = Transformer(data_params=data_params, logger=create_logger(".log.txt"), embd_file="data/mono/all.en-fr.60000.vec")
 
-    enc = StackedEncoder(n_layers=6, vocab_size=[90, 90], params=params, n_langs=2)
-    dec = StackedDecoder(n_layers=6, vocab_size=[90, 90], params=params, n_langs=2, is_shared_emb=False)
 
-    beam = MyBeamSearch(beam_size=3, batch_size=10, pad=2,bos=0, eos=1, n_best=2, mb_device=torch.device("cpu"), encoding_lengths=None, max_length=40, src_lang_id=0, tgt_lang_id=1)
-    print(beam.perform(enc, dec, x, src_m))
+    beam = MyBeamSearch(beam_size=3, batch_size=2, pad=2,bos=0, eos=1, n_best=2, mb_device=torch.device("cpu"), encoding_lengths=512, max_length=40, src_lang_id=0, tgt_lang_id=1)
+    print(beam.perform(transformer, x, src_m))
