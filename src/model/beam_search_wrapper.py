@@ -48,17 +48,17 @@ class MyBeamSearch:
         enc_out = encoder(batch, src_mask, self.src_lang_id)
         # dec_output should be batch_size x dec_seq_len x hidden_size
         #in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
-        dec_out = decoder(batch, enc_out, src_mask, None)
+        dec_out = decoder(None, enc_out, src_mask, None)
         #log_probs should be batch_size x dec_seq_len x vocab_size
         #in this case it's batch_size x 1 x vocab_size
-        log_probs = torch.log(transformer.decode(batch, enc_out, src_mask, None, self.tgt_lang_id))
+        log_probs = transformer.decode(batch, enc_out, src_mask, None, self.tgt_lang_id).log()
         #expand to batch_size x beam_size x vocab_size
 
 
         for step in range(self.max_length):
-            log_probs_beam_search = log_probs.expand(-1, self.beam_size, -1)
             # change to batch_size * beam_size x vocab_size
-            log_probs_beam_search = log_probs.view(self.batch_size * self.beam_size, -1)
+            log_probs_beam_search = log_probs.expand(-1, self.beam_size, -1).view(self.batch_size * self.beam_size, -1)
+
             #advance takes something of size batch_size * beam_size x vocab_size
             self.beamSearch.advance(log_probs_beam_search, None)
             print("current predictions shape is " + str(self.beamSearch.current_predictions.shape))
@@ -72,19 +72,16 @@ class MyBeamSearch:
                     break
 
             #Takes the last decoder hidden state from the decoder outputs, which is meant as the decoder hidden state of the next word
-            #next_word should be dimension batch_size x 1 x hidden_size
+            #next_word_dec_out should be dimension batch_size x 1 x hidden_size
             next_word_dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
                                  lang_id=self.tgt_lang_id)[:,-1,:].unsqueeze(1)
 
 
-            #next_word_log_probs is batch_size x 1 x vocab_size
-            next_word_log_probs = torch.log(transformer.decode(dec_out, enc_out, src_mask, None, self.tgt_lang_id))[:-1:].unsqueeze(1)
+            #update log_probs to be the next word's log probabilities. Should be batch_size x 1 x vocab_size
+            log_probs = transformer.decode(dec_out, enc_out, src_mask, None, self.tgt_lang_id).log()[:,-1,:].unsqueeze(1)
 
-            #add the word generated to the previous decoder output
-            #dec out should be batch_size x previous_sentence_len + 1 x hidden_size
-            dec_out = torch.cat(dec_out, next_word_dec_out, dim=1)
-
-            #TODO: Figure out how to update log_probs and/or log_probs_beam_search so the next advance uses the updated probabilities
+            #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
+            dec_out = torch.cat((dec_out, next_word_dec_out), 1)
 
 
 
