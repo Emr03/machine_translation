@@ -1,7 +1,7 @@
 from src.model.transformer import *
 from src.onmt.translate.beam import *
 from src.onmt.translate.beam_search import BeamSearch
-from src.utils.logger import *
+from logging import getLogger
 
 class MyBeamSearch:
     '''
@@ -47,13 +47,20 @@ class MyBeamSearch:
 
         enc_out = encoder(batch, src_mask, self.src_lang_id)
         # dec_output should be batch_size x dec_seq_len x hidden_size
+        #in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
         dec_out = decoder(batch, enc_out, src_mask, None)
         #log_probs should be batch_size x dec_seq_len x vocab_size
+        #in this case it's batch_size x 1 x vocab_size
         log_probs = torch.log(transformer.decode(batch, enc_out, src_mask, None, self.tgt_lang_id))
+        #expand to batch_size x beam_size x vocab_size
+
+
         for step in range(self.max_length):
-            #advance takes something of size batch_size * beam_size, 1
-            #attention is only used for coverage penalty, which we're not using
-            self.beamSearch.advance(log_probs, None)
+            log_probs_beam_search = log_probs.expand(-1, self.beam_size, -1)
+            # change to batch_size * beam_size x vocab_size
+            log_probs_beam_search = log_probs.view(self.batch_size * self.beam_size, -1)
+            #advance takes something of size batch_size * beam_size x vocab_size
+            self.beamSearch.advance(log_probs_beam_search, None)
             print("current predictions shape is " + str(self.beamSearch.current_predictions.shape))
 
             # checks if any beam is finished, then updates state.
@@ -64,11 +71,20 @@ class MyBeamSearch:
                 if self.beamSearch.done:
                     break
 
-            #pass in stuff to decoder, get log probabilities and new decoder states back
-            dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
-                                 lang_id=self.tgt_lang_id)
+            #Takes the last decoder hidden state from the decoder outputs, which is meant as the decoder hidden state of the next word
+            #next_word should be dimension batch_size x 1 x hidden_size
+            next_word_dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
+                                 lang_id=self.tgt_lang_id)[:,-1,:].unsqueeze(1)
 
-            log_probs = torch.log(transformer.decode(dec_out, enc_out, src_mask, None, self.tgt_lang_id))
+
+            #next_word_log_probs is batch_size x 1 x vocab_size
+            next_word_log_probs = torch.log(transformer.decode(dec_out, enc_out, src_mask, None, self.tgt_lang_id))[:-1:].unsqueeze(1)
+
+            #add the word generated to the previous decoder output
+            #dec out should be batch_size x previous_sentence_len + 1 x hidden_size
+            dec_out = torch.cat(dec_out, next_word_dec_out, dim=1)
+
+            #TODO: Figure out how to update log_probs and/or log_probs_beam_search so the next advance uses the updated probabilities
 
 
 
@@ -83,11 +99,11 @@ if __name__ == "__main__":
     src_m = torch.ones(2, 5)
     src_m[:, -2:-1] = 0
     src_m = src_m.unsqueeze(-2).unsqueeze(-2)
-    #print(src_m.shape)
+
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
-    transformer = Transformer(data_params=data_params, logger=create_logger(".log.txt"), embd_file="data/mono/all.en-fr.60000.vec")
+    transformer = Transformer(data_params=data_params, logger=getLogger(), embd_file="data/mono/all.en-fr.60000.vec")
 
 
     beam = MyBeamSearch(beam_size=3, batch_size=2, pad=2,bos=0, eos=1, n_best=2, mb_device=torch.device("cpu"), encoding_lengths=512, max_length=40, src_lang_id=0, tgt_lang_id=1)

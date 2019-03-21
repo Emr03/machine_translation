@@ -2,7 +2,7 @@ from src.model.decoder import *
 from src.model.encoder import *
 from src.model.noise_model import *
 from src.data.load_embeddings import *
-
+from src.utils.config import params
 
 class Transformer(torch.nn.Module):
 
