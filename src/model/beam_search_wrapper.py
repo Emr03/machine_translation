@@ -1,7 +1,7 @@
-from src.model.transformer import *
+from src.model.decoder import *
+from src.model.encoder import *
 from src.onmt.translate.beam import *
 from src.onmt.translate.beam_search import BeamSearch
-import torch.nn.functional as F
 
 
 class MyBeamSearch:
@@ -41,30 +41,37 @@ class MyBeamSearch:
     Returns: hypotheses (list[list[Tuple[Tensor]]]): Contains a tuple
             of score (float), sequence (long), and attention (float or None).
     '''
-    def search(self, transformer, batch, src_mask):
+    def perform(self, transformer, batch, src_mask):
 
-        enc_out = transformer.encode(batch, src_mask, self.src_lang_id)
+        encoder = transformer.encoder
+        decoder = transformer.decoder
 
+        enc_out = encoder(batch, src_mask, self.src_lang_id)
+        # dec_output should be batch_size x dec_seq_len x hidden_size
+        dec_out = decoder(batch, enc_out, src_mask, None)
+        #log_probs should be batch_size x dec_seq_len x vocab_size
+        log_probs = torch.log(transformer.decode(batch, enc_out, src_mask, None, self.tgt_lang_id))
         for step in range(self.max_length):
-
-            decoder_in = self.beamSearch.current_predictions.view(1, -1, 1)
-
-            #pass in stuff to decoder, get log probabilities back
-            dec_output = transformer.decode(decoder_in, enc_out, src_mask, tgt_mask=None,
-                                 lang_id=self.tgt_lang_id)
-
-            log_probs = F.log_softmax(dec_output, dim=-1)
-
+            #advance takes something of size batch_size * beam_size, 1
             #attention is only used for coverage penalty, which we're not using
             self.beamSearch.advance(log_probs, None)
+            print("current predictions shape is " + str(self.beamSearch.current_predictions.shape))
 
-            #checks if any beam is finished, then updates state.
+            # checks if any beam is finished, then updates state.
             any_beam_is_finished = self.beam.is_finished.any()
             if any_beam_is_finished:
                 self.beamSearch.update_finished()
-                #done if all beams are finished
+                # done if all beams are finished
                 if self.beamSearch.done:
                     break
+
+            #pass in stuff to decoder, get log probabilities back
+            dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
+                                 lang_id=self.tgt_lang_id)
+
+            log_probs = torch.log(transformer.decode(dec_out, enc_out, src_mask, None, self.tgt_lang_id))
+
+
 
         return self.beamSearch.hypotheses
 
@@ -79,14 +86,8 @@ if __name__ == "__main__":
     src_m = src_m.unsqueeze(-2).unsqueeze(-2)
     #print(src_m.shape)
 
-    parser = get_parser()
-    data_params = parser.parse_args()
-    check_all_data_params(data_params)
-    transformer = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
+    enc = StackedEncoder(n_layers=6, vocab_size=[90, 90], params=params, n_langs=2)
+    dec = StackedDecoder(n_layers=6, vocab_size=[90, 90], params=params, n_langs=2, is_shared_emb=False)
 
-    beam = MyBeamSearch(beam_size=3, batch_size=10, pad=2, bos=0, eos=1,
-                        n_best=2, mb_device=torch.device("cpu"),
-                        encoding_lengths=None, max_length=40,
-                        src_lang_id=0, tgt_lang_id=1)
-
-    print(beam.search(transformer, x, src_m))
+    beam = MyBeamSearch(beam_size=3, batch_size=10, pad=2,bos=0, eos=1, n_best=2, mb_device=torch.device("cpu"), encoding_lengths=None, max_length=40, src_lang_id=0, tgt_lang_id=1)
+    print(beam.perform(enc, dec, x, src_m))
