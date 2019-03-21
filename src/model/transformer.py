@@ -22,6 +22,7 @@ class Transformer(torch.nn.Module):
         self.d_k = params["d_k"]
 
         self.is_shared_emb = is_shared_emb
+        self.is_variational = is_variational
 
         # will be set in load_data
         self.data = None
@@ -59,8 +60,11 @@ class Transformer(torch.nn.Module):
             self.linear_layers = torch.nn.ModuleList([torch.nn.Linear(self.d_model, self.vocab_size[l]) for l in range(self.n_langs)])
 
         if is_variational:
-            self.sigma_layer = torch.nn.Linear(self.d_model, self.d_model)
-            # TODO: variational attention
+            # compute sigma, assume diagonal for now, shape = batch_size, len, d_model
+            self.compute_sigma = torch.nn.Sequential(torch.nn.Linear(self.d_model, self.d_model),
+                                                     torch.nn.Tanh(),
+                                                     torch.nn.Linear(self.d_model, self.d_model),
+                                                     torch.nn.Softplus())
 
         def init_weights(m):
 
@@ -89,14 +93,30 @@ class Transformer(torch.nn.Module):
         dec_output = self.decoder(prev_output, latent_seq, src_mask=src_mask, tgt_mask=tgt_mask, lang_id=tgt_lang)
         return self.linear_layers[tgt_lang](dec_output)
 
+    def sample_z(self, mean, n_samples):
+        """
+
+        :param mean:
+        :param n_samples:
+        :return: latent variables of shape [n_samples, batch_size, len, d_model]
+        """
+        sigma = self.compute_sigma(mean)
+        # make sigma a diagonal matrix of shape batch size, seq len, dim, dim
+        sigma = self.compute_sigma(mean)
+        sigma = sigma.unsqueeze(-1).expand(*sigma.size(), self.d_model)
+        sigma = sigma * torch.eye(self.d_model)
+
+        z = torch.distributions.MultivariateNormal(loc=mean, covariance_matrix=sigma)
+
+        # samples z using reparameterization trick, the gradient will be propagated back
+        return z.rsample(sample_shape=torch.Size([n_samples]))
+
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
         latent = self.encode(input_seq, src_mask, src_lang)
 
-        if is_variational:
-
-            sigma =
-            z = latent +
+        if self.is_variational:
+            latent = self.sample_z(mean=latent, n_samples=1)
 
         dec_outputs = self.decode(prev_output=prev_output,
                                   latent_seq=latent,
