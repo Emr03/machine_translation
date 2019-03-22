@@ -45,7 +45,7 @@ class MyBeamSearch:
         encoder = transformer.encoder
         decoder = transformer.decoder
         #bos_embedding should be batch_size x 1 x hidden_size
-        bos_embedding = decoder.embedding_layers[self.tgt_lang_id](torch.Tensor(batch.size(0), 1, self.bos))
+        bos_embedding = decoder.embedding_layers[self.tgt_lang_id](torch.Tensor([self.bos]).expand(batch.size(0), 1))
         print(bos_embedding.shape)
         #batch should be of size batch_size x seq_len x hidden_size
         #enc_out is of size batch_size x seq_len x hidden_size
