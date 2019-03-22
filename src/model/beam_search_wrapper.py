@@ -44,11 +44,15 @@ class MyBeamSearch:
 
         encoder = transformer.encoder
         decoder = transformer.decoder
-
+        #bos_embedding should be batch_size x 1 x hidden_size
+        bos_embedding = decoder.embedding_layers[self.tgt_lang_id](torch.Tensor(batch.size(0), 1, self.bos))
+        print(bos_embedding.shape)
+        #batch should be of size batch_size x seq_len x hidden_size
+        #enc_out is of size batch_size x seq_len x hidden_size
         enc_out = encoder(batch, src_mask, self.src_lang_id)
         # dec_output should be batch_size x dec_seq_len x hidden_size
         #in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
-        dec_out = decoder(None, enc_out, src_mask, None)
+        dec_out = decoder(bos_embedding, enc_out, src_mask, None)
         #log_probs should be batch_size x dec_seq_len x vocab_size
         #in this case it's batch_size x 1 x vocab_size
         log_probs = transformer.decode(batch, enc_out, src_mask, None, self.tgt_lang_id).log()
