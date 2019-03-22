@@ -51,57 +51,54 @@ class MyBeamSearch:
         assert(batch.size(0) == self.batch_size)
         assert(len(batch.shape) == 2)
 
-        # (1) Run the encoder on the src.
-        enc_out = transformer.encode(batch, src_mask, src_lang)
+        # disable gradient tracking
+        with torch.set_grad_enabled(False):
 
-        # (2) Repeat src objects `beam_size` times. along dim 1
-        # We use batch_size x beam_size
-        enc_out = tile(enc_out, self.beam_size, dim=0)
-        src_mask = tile(src_mask, self.beam_size, dim=0)
-        print("enc out", enc_out.shape)
+            # (1) Run the encoder on the src.
+            enc_out = transformer.encode(batch, src_mask, src_lang)
 
-        # dec_output should be batch_size x beam_size, dec_seq_len
-        # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
-        dec_out = torch.ones(self.batch_size, self.beam_size, 1)*self.bos_index
+            # (2) Repeat src objects `beam_size` times. along dim 1
+            # We use batch_size x beam_size
+            enc_out = tile(enc_out, self.beam_size, dim=0)
+            src_mask = tile(src_mask, self.beam_size, dim=0)
+            print("enc out", enc_out.shape)
 
-        for step in range(self.max_length):
+            # dec_output should be batch_size x beam_size, dec_seq_len
+            # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
+            dec_out = torch.ones(self.batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index
 
-            decoder_input = self.beamSearch.current_predictions.view(-1, 1)
-            print("decoder_input", decoder_input.shape)
+            for step in range(self.max_length):
 
-            # in case of inference tgt_len = 1, batch = beam times batch_size
-            log_probs = transformer.decode(decoder_input, enc_out, src_mask,
-                                           tgt_mask=None, tgt_lang=tgt_lang)[:, -1, :]
+                # decoder_input = self.beamSearch.current_predictions.view(-1, 1)
+                # print("decoder_input", decoder_input.shape)
 
-            print(log_probs.requires_grad)
-            log_probs = F.log_softmax(log_probs, dim=-1)
-            print("log probs", log_probs.shape)
+                # in case of inference tgt_len = 1, batch = beam times batch_size
+                log_probs = transformer.decode(dec_out, enc_out, src_mask,
+                                               tgt_mask=None, tgt_lang=tgt_lang)[:, -1, :]
 
-            #advance takes input of size batch_size*beam_size x vocab_size
-            self.beamSearch.advance(log_probs, None)
-            print("current predictions shape is " + str(self.beamSearch.current_predictions.shape))
+                log_probs = F.log_softmax(log_probs, dim=-1)
+                print("log probs", log_probs.shape)
 
-            # checks if any beam is finished, then updates state.
-            any_beam_is_finished = self.beam.is_finished.any()
-            if any_beam_is_finished:
-                self.beamSearch.update_finished()
-                # done if all beams are finished
-                if self.beamSearch.done:
-                    break
+                #advance takes input of size batch_size*beam_size x vocab_size
+                self.beamSearch.advance(log_probs, None)
 
-            #Takes the last decoder hidden state from the decoder outputs, which is meant as the decoder hidden state of the next word
-            #next_word_dec_out should be dimension batch_size x 1 x hidden_size
-            next_word_dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
-                                 lang_id=tgt_lang)[:,-1,:].unsqueeze(1)
+                next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
+                #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
+                dec_out = torch.cat((dec_out, next_word), 1)
+                #print("current predictions shape is " + str(self.beamSearch.current_predictions))
+                print("dec out", dec_out)
 
+                # indices indicate which beams correspond to the same batch
+                select_indices = self.beamSearch.current_origin
+                print("select indices", select_indices)
 
-            #update log_probs to be the next word's log probabilities. Should be batch_size x 1 x vocab_size
-            log_probs = transformer.decode(dec_out, enc_out, src_mask, None, tgt_lang).log()[:,-1,:].unsqueeze(1)
-
-            #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
-            dec_out = torch.cat((dec_out, next_word_dec_out), 1)
-
-
+                # checks if any beam is finished, then updates state.
+                any_beam_is_finished = self.beamSearch.is_finished.any()
+                if any_beam_is_finished:
+                    self.beamSearch.update_finished()
+                    # done if all beams are finished
+                    if self.beamSearch.done:
+                        break
 
         return self.beamSearch.hypotheses
 
