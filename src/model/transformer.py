@@ -34,8 +34,18 @@ class Transformer(torch.nn.Module):
         self.dictionaries = None
         self.vocab_size = None
 
-        self.load_data(data_params)
-        self.n_langs = len(self.languages)
+        if data_params is not None:
+            self.load_data(data_params)
+            self.n_langs = len(self.languages)
+
+        # for debugging
+        else:
+            self.n_langs=2
+            self.vocab_size=[500, 500]
+            self.id2lang = None
+            self.bos_index = 0
+            self.eos_index = 1
+            self.pad_index = 2
 
         self.encoder = StackedEncoder(n_layers=self.n_layers,
                                       params=params,

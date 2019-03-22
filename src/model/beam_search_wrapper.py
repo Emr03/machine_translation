@@ -2,6 +2,7 @@ from src.model.transformer import *
 from src.onmt.translate.beam import *
 from src.onmt.translate.beam_search import BeamSearch
 from logging import getLogger
+from src.utils.beam_search_utils import tile
 
 class MyBeamSearch:
     '''
@@ -14,18 +15,23 @@ class MyBeamSearch:
         encoding_lengths: LongTensor of encoding lengths
         max_length: Longest acceptable sequence, not counting begin-of-sentence (presumably there has been no EOS yet if max_length is used as a cutoff)
     '''
-    def __init__(self, beam_size, batch_size, pad, bos, eos, n_best,
-                 mb_device, encoding_lengths, max_length, src_lang_id, tgt_lang_id):
+    def __init__(self, beam_size, batch_size, n_best,
+                 mb_device, encoding_lengths, max_length):
 
         self.batch_size = batch_size
         self.beam_size = beam_size
         self.max_length = max_length
-        self.src_lang_id = src_lang_id
-        self.tgt_lang_id = tgt_lang_id
+
+        self.pad_index = transformer.pad_index
+        self.eos_index = transformer.eos_index
+        self.bos_index = transformer.bos_index
+        self.id2lang = transformer.id2lang
 
         #pad, bos, and eos are based on values from Dictionary.py.
         # GMTGlobalScorer for length penalty
-        self.beamSearch = BeamSearch(beam_size, batch_size, pad=pad, bos=bos, eos=eos,
+        self.beamSearch = BeamSearch(beam_size, batch_size,
+                                     pad=self.pad_index, bos=self.bos_index,
+                                     eos=self.eos_index,
                                      n_best=n_best, mb_device=mb_device,
                                      global_scorer=GNMTGlobalScorer(0.7, 0., "avg", "none"),
                                      min_length=0, max_length=max_length, return_attention=False,
@@ -40,31 +46,39 @@ class MyBeamSearch:
     Returns: hypotheses (list[list[Tuple[Tensor]]]): Contains a tuple
             of score (float), sequence (long), and attention (float or None).
     '''
-    def perform(self, transformer, batch, src_mask):
+    def perform(self, transformer, batch, src_mask, src_lang, tgt_lang):
 
-        encoder = transformer.encoder
-        decoder = transformer.decoder
-        #bos_embedding should be batch_size x 1 x hidden_size
-        bos_embedding = decoder.embedding_layers[self.tgt_lang_id](torch.Tensor([self.bos]).expand(batch.size(0), 1))
-        print(bos_embedding.shape)
-        #batch should be of size batch_size x seq_len x hidden_size
-        #enc_out is of size batch_size x seq_len x hidden_size
-        enc_out = encoder(batch, src_mask, self.src_lang_id)
-        # dec_output should be batch_size x dec_seq_len x hidden_size
-        #in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
-        dec_out = decoder(bos_embedding, enc_out, src_mask, None)
-        #log_probs should be batch_size x dec_seq_len x vocab_size
-        #in this case it's batch_size x 1 x vocab_size
-        log_probs = transformer.decode(batch, enc_out, src_mask, None, self.tgt_lang_id).log()
-        #expand to batch_size x beam_size x vocab_size
+        assert(batch.size(0) == self.batch_size)
+        assert(len(batch.shape) == 2)
 
+        # (1) Run the encoder on the src.
+        enc_out = transformer.encode(batch, src_mask, src_lang)
+
+        # (2) Repeat src objects `beam_size` times. along dim 1
+        # We use batch_size x beam_size
+        enc_out = tile(enc_out, self.beam_size, dim=0)
+        src_mask = tile(src_mask, self.beam_size, dim=0)
+        print("enc out", enc_out.shape)
+
+        # dec_output should be batch_size x beam_size, dec_seq_len
+        # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
+        dec_out = torch.ones(self.batch_size, self.beam_size, 1)*self.bos_index
 
         for step in range(self.max_length):
-            # change to batch_size * beam_size x vocab_size
-            log_probs_beam_search = log_probs.expand(-1, self.beam_size, -1).view(self.batch_size * self.beam_size, -1)
 
-            #advance takes something of size batch_size * beam_size x vocab_size
-            self.beamSearch.advance(log_probs_beam_search, None)
+            decoder_input = self.beamSearch.current_predictions.view(-1, 1)
+            print("decoder_input", decoder_input.shape)
+
+            # in case of inference tgt_len = 1, batch = beam times batch_size
+            log_probs = transformer.decode(decoder_input, enc_out, src_mask,
+                                           tgt_mask=None, tgt_lang=tgt_lang)[:, -1, :]
+
+            print(log_probs.requires_grad)
+            log_probs = F.log_softmax(log_probs, dim=-1)
+            print("log probs", log_probs.shape)
+
+            #advance takes input of size batch_size*beam_size x vocab_size
+            self.beamSearch.advance(log_probs, None)
             print("current predictions shape is " + str(self.beamSearch.current_predictions.shape))
 
             # checks if any beam is finished, then updates state.
@@ -78,11 +92,11 @@ class MyBeamSearch:
             #Takes the last decoder hidden state from the decoder outputs, which is meant as the decoder hidden state of the next word
             #next_word_dec_out should be dimension batch_size x 1 x hidden_size
             next_word_dec_out = decoder(dec_out, enc_out, src_mask, tgt_mask=None,
-                                 lang_id=self.tgt_lang_id)[:,-1,:].unsqueeze(1)
+                                 lang_id=tgt_lang)[:,-1,:].unsqueeze(1)
 
 
             #update log_probs to be the next word's log probabilities. Should be batch_size x 1 x vocab_size
-            log_probs = transformer.decode(dec_out, enc_out, src_mask, None, self.tgt_lang_id).log()[:,-1,:].unsqueeze(1)
+            log_probs = transformer.decode(dec_out, enc_out, src_mask, None, tgt_lang).log()[:,-1,:].unsqueeze(1)
 
             #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
             dec_out = torch.cat((dec_out, next_word_dec_out), 1)
@@ -101,11 +115,13 @@ if __name__ == "__main__":
     src_m[:, -2:-1] = 0
     src_m = src_m.unsqueeze(-2).unsqueeze(-2)
 
-    parser = get_parser()
-    data_params = parser.parse_args()
-    check_all_data_params(data_params)
-    transformer = Transformer(data_params=data_params, logger=getLogger(), embd_file="data/mono/all.en-fr.60000.vec")
+    # parser = get_parser()
+    # data_params = parser.parse_args()
+    # check_all_data_params(data_params)
+    transformer = Transformer(data_params=None, logger=getLogger(), embd_file=None).eval()
 
+    beam = MyBeamSearch(beam_size=3, batch_size=2, n_best=2,
+                        mb_device=torch.device("cpu"),
+                        encoding_lengths=512, max_length=40)
 
-    beam = MyBeamSearch(beam_size=3, batch_size=2, pad=2,bos=0, eos=1, n_best=2, mb_device=torch.device("cpu"), encoding_lengths=512, max_length=40, src_lang_id=0, tgt_lang_id=1)
-    print(beam.perform(transformer, x, src_m))
+    print(beam.perform(transformer.eval(), x, src_m, src_lang=1, tgt_lang=1))

@@ -122,8 +122,10 @@ class BeamSearch(DecodeStrategy):
         vocab_size = log_probs.size(-1)
 
         # using integer division to get an integer _B without casting
+        # batch size
         _B = log_probs.shape[0] // self.beam_size
 
+        # for additional penalties
         if self._stepwise_cov_pen and self._prev_penalty is not None:
             self.topk_log_probs += self._prev_penalty
             self.topk_log_probs -= self.global_scorer.cov_penalty(
@@ -135,6 +137,9 @@ class BeamSearch(DecodeStrategy):
         self.ensure_min_length(log_probs)
 
         # Multiply probs by the beam probability.
+        # topk = self.topk_log_probs.view(_B * self.beam_size, 1).repeat(1, 500)
+        # print("topk", topk.shape)
+        # print("top_k", self.topk_log_probs.shape)
         log_probs += self.topk_log_probs.view(_B * self.beam_size, 1)
 
         self.block_ngram_repeats(log_probs)
@@ -147,6 +152,8 @@ class BeamSearch(DecodeStrategy):
         # Flatten probs into a list of possibilities.
         curr_scores = log_probs / length_penalty
         curr_scores = curr_scores.reshape(_B, self.beam_size * vocab_size)
+
+        print(curr_scores.requires_grad, self.topk_scores.requires_grad, self.topk_ids.requires_grad)
         torch.topk(curr_scores,  self.beam_size, dim=-1,
                    out=(self.topk_scores, self.topk_ids))
 

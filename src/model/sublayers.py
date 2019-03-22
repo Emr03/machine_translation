@@ -36,9 +36,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         len = x.shape[1]
         batch_size = x.shape[0]
-        print(batch_size)
         t = self.pe[0:len, :]
-        print(t.shape)
         return self.dropout(x + t)
 
     def visualize(self):
@@ -148,7 +146,7 @@ class VariationalAttention(torch.nn.Module):
         return z
 
     def sample(self, a_det, sigma, n_samples):
-        
+
         # sample latent code
         # shape = n_samples, batch_size, len, d_model
         z = torch.distributions.MultivariateNormal(loc=a_det, covariance_matrix=sigma)
@@ -199,4 +197,3 @@ if __name__ == "__main__":
     out = nn(x)
 
     print(out.shape)
-
