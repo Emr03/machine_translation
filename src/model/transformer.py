@@ -137,7 +137,7 @@ class Transformer(torch.nn.Module):
                                   enc_output=latent,
                                   src_mask=src_mask,
                                   tgt_mask=tgt_mask,
-                                  tgt_lang=tgt_lang)
+                                  lang_id=tgt_lang)
 
         return dec_outputs
 

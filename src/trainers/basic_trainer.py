@@ -17,6 +17,7 @@ class Trainer(ABC):
         self.encode = transformer.encode
         self.decode = transformer.decode
         self.logger = transformer.logger
+        self.parallel = parallel
 
         if torch.cuda.is_available() and not parallel:
             self.device = torch.device('cuda')
@@ -33,6 +34,7 @@ class Trainer(ABC):
         else:
             self.device = torch.device('cpu')
             self.logger.info("Using CPU")
+            self.parallel = False
 
         self.data = transformer.data
         self.data_params = transformer.data_params
@@ -93,7 +95,9 @@ class Trainer(ABC):
         # same device and dtype as x, requires_grad = false
         smooth_target = torch.zeros_like(x)
         smooth_target.fill_(self.smoothing / self.vocab_size[lang])
-        smooth_target.scatter_(dim=1, index=target.data, value=self.confidence)
+
+        if self.parallel:
+            smooth_target.scatter_(dim=1, index=target.data, value=self.confidence)
 
         # zero the pad_index for each vector of probabilities
         smooth_target[:, self.pad_index] = 0
