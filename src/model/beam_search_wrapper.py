@@ -29,6 +29,7 @@ class MyBeamSearch:
 
         #pad, bos, and eos are based on values from Dictionary.py.
         # GMTGlobalScorer for length penalty
+        # TODO: what is n_best?
         self.beamSearch = BeamSearch(beam_size, batch_size,
                                      pad=self.pad_index, bos=self.bos_index,
                                      eos=self.eos_index,
@@ -57,15 +58,21 @@ class MyBeamSearch:
             # (1) Run the encoder on the src.
             enc_out = transformer.encode(batch, src_mask, src_lang)
 
-            # (2) Repeat src objects `beam_size` times. along dim 1
+            # (2) Repeat src objects `beam_size` times. along dim 0
             # We use batch_size x beam_size
-            enc_out = tile(enc_out, self.beam_size, dim=0)
-            src_mask = tile(src_mask, self.beam_size, dim=0)
-            print("enc out", enc_out.shape)
+            enc_out = enc_out.repeat(self.beam_size, 1, 1)
+            src_mask = src_mask.repeat(self.beam_size, 1, 1, 1)
+            #print("enc out", enc_out[:, :, 0])
 
             # dec_output should be batch_size x beam_size, dec_seq_len
             # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
             dec_out = torch.ones(self.batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index
+
+            # sanity check
+            # print("sanity check")
+            # print(self.beamSearch.current_predictions)
+            # print(self.beamSearch.current_origin)
+            # dec_out = self.beamSearch.current_predictions.view(-1, 1)
 
             for step in range(self.max_length):
 
@@ -77,28 +84,33 @@ class MyBeamSearch:
                                                tgt_mask=None, tgt_lang=tgt_lang)[:, -1, :]
 
                 log_probs = F.log_softmax(log_probs, dim=-1)
-                print("log probs", log_probs.shape)
+                #print("log probs", log_probs.shape)
 
                 #advance takes input of size batch_size*beam_size x vocab_size
                 self.beamSearch.advance(log_probs, None)
 
-                next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
-                #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
-                dec_out = torch.cat((dec_out, next_word), 1)
-                #print("current predictions shape is " + str(self.beamSearch.current_predictions))
-                print("dec out", dec_out)
-
-                # indices indicate which beams correspond to the same batch
-                select_indices = self.beamSearch.current_origin
-                print("select indices", select_indices)
-
-                # checks if any beam is finished, then updates state.
+                # check if any beam is finished (last output selected was eos)
                 any_beam_is_finished = self.beamSearch.is_finished.any()
                 if any_beam_is_finished:
-                    self.beamSearch.update_finished()
-                    # done if all beams are finished
-                    if self.beamSearch.done:
+                    beam.update_finished()
+                    if beam.done:
                         break
+
+                # get chosen words by beam search
+                next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
+
+                # get indices of expanded nodes, for each input sentence
+                select_indices = self.beamSearch.current_origin
+                print("select_indices", select_indices)
+
+                # select previous output of expanded nodes
+                dec_out = dec_out[select_indices]
+                print("dec_out", dec_out)
+
+                #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
+                dec_out = torch.cat((dec_out, next_word), 1)
+                print("current predictions" + str(self.beamSearch.current_predictions))
+                print("dec out", dec_out)
 
         return self.beamSearch.hypotheses
 
@@ -107,6 +119,7 @@ if __name__ == "__main__":
     from src.utils.config import params
     #batch_size x seq_len
     x = torch.zeros(2, 5, dtype=torch.int64)
+    x[1, :] = torch.ones(5, dtype=torch.int64)
 
     src_m = torch.ones(2, 5)
     src_m[:, -2:-1] = 0

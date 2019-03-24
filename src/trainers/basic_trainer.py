@@ -134,6 +134,22 @@ class Trainer(ABC):
         #print("tgt_m", tgt_m)
         return tgt_m
 
+    def compute_sent_len(self, sentences):
+        """
+        returns a tensor containing the length of each sentence in the batch
+        :param sentences: batch_size, max_len
+        :return:
+        """
+        n_sent = sentences.shape[0]
+        # TODO: make sure sentences end with eos
+        eos_indices = (sentences == self.eos_index).nonzero()
+        assert(eos_indices.shape[0] == n_sent)
+        eos_indices = eos_indices[:, 1].unsqueeze_() + 1
+        return eos_indices
+
+    def pad_sentences(self, sentences):
+        pass
+
     @abstractmethod
     def train(n_iter):
         pass
@@ -215,62 +231,6 @@ class Trainer(ABC):
         else:
             assert (self.data['para'][(src_lang, tgt_lang)]['valid'] is not None)
             get_iterator = self.data['para'][(src_lang, tgt_lang)]['valid'].get_iterator(shuffle=True, group_by_size=True)
-
-        batch_iterator = get_iterator()
-
-        def iterator():
-
-            for src, tgt in batch_iterator:
-
-                src_batch, src_l = src
-                tgt_batch, tgt_l = tgt
-
-                tgt_batch.transpose_(0, 1)
-                src_batch.transpose_(0, 1)
-
-                if add_noise:
-                    src_batch, src_l = self.noise_model.add_noise(src_batch, src_l, lang1)
-
-                # does not create new tensor
-                prev_output = tgt_batch[:, :-1]
-                tgt_batch = tgt_batch[:, 1:]
-
-                src_mask = self.get_src_mask(src_batch)
-                tgt_mask = self.get_tgt_mask(prev_output)
-
-                # move to cuda
-                tgt_batch = tgt_batch.to(self.device)
-                src_batch = src_batch.to(self.device)
-                src_mask = src_mask.to(self.device)
-                tgt_mask = tgt_mask.to(self.device)
-                src_l = src_l.to(self.device)
-                tgt_l = tgt_l.to(self.device)
-
-                yield {"src_batch": src_batch,
-                       "tgt_batch": tgt_batch,
-                       "prev_output": prev_output,
-                       "src_mask": src_mask,
-                       "tgt_mask": tgt_mask,
-                       "src_l": src_l,
-                       "tgt_l": tgt_l}
-
-        return iterator
-
-    def get_back_para_iterator(self, lang1, lang2, add_noise=False):
-        """
-        returns training batches to back-translate from lang1 to lang2
-        :param lang1:
-        :param lang2:
-        :param train:
-        :param add_noise:
-        :return:
-        """
-
-        src_lang = self.id2lang[lang1]
-        tgt_lang = self.id2lang[lang2]
-
-        assert (self.data['back_para'][(src_lang, tgt_lang)]['train'] is not None)
-        get_iterator = self.data['back_para'][(src_lang, tgt_lang)]['train'].get_iterator(shuffle=True, group_by_size=True)
 
         batch_iterator = get_iterator()
 

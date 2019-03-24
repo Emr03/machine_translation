@@ -50,7 +50,7 @@ class BeamSearch(DecodeStrategy):
         _coverage (FloatTensor or NoneType): Shape
             ``(1, B x beam_size, inp_seq_len)``.
         hypotheses (list[list[Tuple[Tensor]]]): Contains a tuple
-            of score (float), sequence (long), and attention (float or None).
+            of score (float), sequence (long), and attention (float or None)
     """
 
     def __init__(self, beam_size, batch_size, pad, bos, eos, n_best, mb_device,
