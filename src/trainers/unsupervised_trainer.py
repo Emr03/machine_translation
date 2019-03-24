@@ -136,7 +136,10 @@ class UnsupervisedTrainer(Trainer):
         :return:
         """
 
-        beam = MyBeamSearch(beam_size=1, batch_size=self.batch_size, n_best=2,
+        batch_size = src_batch.shape[0]
+        assert(src_mask.shape[0] == batch_size)
+
+        beam = MyBeamSearch(beam_size=1, batch_size=batch_size, n_best=2,
                             mb_device=self.device,
                             encoding_lengths=512, max_length=40)
 
