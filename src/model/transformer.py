@@ -100,7 +100,12 @@ class Transformer(torch.nn.Module):
 
     def decode(self, prev_output, latent_seq, src_mask, tgt_mask, tgt_lang):
 
-        dec_output = self.decoder(prev_output, latent_seq, src_mask=src_mask, tgt_mask=tgt_mask, lang_id=tgt_lang)
+        dec_output = self.decoder(prev_output,
+                                  latent_seq,
+                                  src_mask=src_mask,
+                                  tgt_mask=tgt_mask,
+                                  lang_id=tgt_lang)
+
         return self.linear_layers[tgt_lang](dec_output)
 
     def sample_z(self, mean, n_samples):
@@ -128,13 +133,13 @@ class Transformer(torch.nn.Module):
         if self.is_variational:
             latent = self.sample_z(mean=latent, n_samples=1)
 
-        dec_outputs = self.decode(prev_output=prev_output,
+        dec_outputs = self.decoder(prev_output=prev_output,
                                   latent_seq=latent,
                                   src_mask=src_mask,
                                   tgt_mask=tgt_mask,
                                   tgt_lang=tgt_lang)
 
-        return self.linear_layers[tgt_lang](dec_outputs)
+        return dec_outputs
 
     def load_data(self, data_params):
 
