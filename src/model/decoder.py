@@ -70,7 +70,7 @@ class StackedDecoder(torch.nn.Module):
         prev_output = self.emb_scale * self.embedding_layers[lang_id](prev_output)
         prev_output = self.pos_enc(prev_output)
         for layer in self.decoder_layers:
-            dec_outputs = layer(prev_outputs=prev_output,
+            dec_outputs = layer(prev_output=prev_output,
                                 enc_output=enc_output,
                                 src_mask = src_mask,
                                 tgt_mask = tgt_mask)

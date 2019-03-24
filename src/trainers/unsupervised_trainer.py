@@ -20,6 +20,8 @@ class UnsupervisedTrainer(Trainer):
         src_mask = batch_dict["src_mask"]
         src_batch = batch_dict["src_batch"]
         prev_output = batch_dict["prev_output"]
+        print("src_batch", src_batch.shape)
+        print("tgt_batch", tgt_batch.shape)
 
         output_seq = self.transformer(input_seq=src_batch,
                                       prev_output=prev_output,
