@@ -134,7 +134,7 @@ class Transformer(torch.nn.Module):
             latent = self.sample_z(mean=latent, n_samples=1)
 
         dec_outputs = self.decoder(prev_output=prev_output,
-                                  latent_seq=latent,
+                                  enc_output=latent,
                                   src_mask=src_mask,
                                   tgt_mask=tgt_mask,
                                   tgt_lang=tgt_lang)
