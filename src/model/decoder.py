@@ -17,12 +17,12 @@ class DecoderLayer(torch.nn.Module):
         self.layer_norm_3 = torch.nn.LayerNorm(normalized_shape=self.d_model)
         self.dropout = torch.nn.Dropout(params["dropout"])
 
-    def forward(self, prev_outputs, enc_outputs, src_mask, tgt_mask):
+    def forward(self, prev_output, enc_outputs, src_mask, tgt_mask):
 
-        out = self.layer_norm_1(self.dropout(self.masked_attn(x_q=dec_outputs,
-                                                 x_k=dec_outputs,
-                                                 x_v=dec_outputs,
-                                                 mask=tgt_mask)) + dec_outputs)
+        out = self.layer_norm_1(self.dropout(self.masked_attn(x_q=prev_output,
+                                                 x_k=prev_output,
+                                                 x_v=prev_output,
+                                                 mask=tgt_mask)) + prev_output)
 
         out = self.layer_norm_2(self.dropout(self.attn(x_q=out,
                                           x_k = enc_outputs,
@@ -58,7 +58,7 @@ class StackedDecoder(torch.nn.Module):
         self.pos_enc = PositionalEncoding(params)
         self.decoder_layers = torch.nn.ModuleList([DecoderLayer(params) for _ in range(n_layers)])
 
-    def forward(self, prev_outputs, enc_outputs, src_mask, tgt_mask, lang_id):
+    def forward(self, prev_output, enc_outputs, src_mask, tgt_mask, lang_id):
         """
 
         :param dec_outputs: in case of inference: words generated so far
@@ -67,10 +67,10 @@ class StackedDecoder(torch.nn.Module):
         :param mask:
         :return:
         """
-        prev_outputs = self.emb_scale * self.embedding_layers[lang_id](prev_outputs)
-        prev_outputs = self.pos_enc(prev_outputs)
+        prev_output = self.emb_scale * self.embedding_layers[lang_id](prev_output)
+        prev_output = self.pos_enc(prev_output)
         for layer in self.decoder_layers:
-            dec_outputs = layer(prev_outputs=prev_outputs,
+            dec_outputs = layer(prev_outputs=prev_output,
                                 enc_outputs=enc_outputs,
                                 src_mask = src_mask,
                                 tgt_mask = tgt_mask)
