@@ -164,6 +164,8 @@ class Trainer(ABC):
         :return:
         """
 
+        lang = self.id2lang[lang]
+
         if train:
             assert (self.data['mono'][lang]['train'] is not None)
             get_src_iterator = self.data['mono'][lang]['train'].get_iterator(shuffle=True, group_by_size=True)
