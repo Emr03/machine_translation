@@ -15,7 +15,7 @@ class MyBeamSearch:
         encoding_lengths: LongTensor of encoding lengths
         max_length: Longest acceptable sequence, not counting begin-of-sentence (presumably there has been no EOS yet if max_length is used as a cutoff)
     '''
-    def __init__(self, beam_size, batch_size, n_best,
+    def __init__(self, transformer, beam_size, batch_size, n_best,
                  mb_device, encoding_lengths, max_length):
 
         self.batch_size = batch_size
@@ -26,6 +26,7 @@ class MyBeamSearch:
         self.eos_index = transformer.eos_index
         self.bos_index = transformer.bos_index
         self.id2lang = transformer.id2lang
+        self.transformer = transformer
 
         #pad, bos, and eos are based on values from Dictionary.py.
         # GMTGlobalScorer for length penalty
@@ -47,10 +48,11 @@ class MyBeamSearch:
     Returns: hypotheses (list[list[Tuple[Tensor]]]): Contains a tuple
             of score (float), sequence (long), and attention (float or None).
     '''
-    def perform(self, transformer, batch, src_mask, src_lang, tgt_lang):
-
+    def perform(self, batch, src_mask, src_lang, tgt_lang):
+	
         assert(batch.size(0) == self.batch_size)
         assert(len(batch.shape) == 2)
+        transformer = self.transformer.eval()
 
         # disable gradient tracking
         with torch.set_grad_enabled(False):
@@ -92,8 +94,8 @@ class MyBeamSearch:
                 # check if any beam is finished (last output selected was eos)
                 any_beam_is_finished = self.beamSearch.is_finished.any()
                 if any_beam_is_finished:
-                    beam.update_finished()
-                    if beam.done:
+                    self.beamSearch.update_finished()
+                    if self.beamSearch.done:
                         break
 
                 # get chosen words by beam search

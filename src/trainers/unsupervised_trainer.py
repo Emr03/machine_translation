@@ -139,11 +139,11 @@ class UnsupervisedTrainer(Trainer):
         batch_size = src_batch.shape[0]
         assert(src_mask.shape[0] == batch_size)
 
-        beam = MyBeamSearch(beam_size=1, batch_size=batch_size, n_best=2,
+        beam = MyBeamSearch(self.transformer, beam_size=1, batch_size=batch_size, n_best=2,
                             mb_device=self.device,
                             encoding_lengths=512, max_length=40)
 
-        output = beam.perform(self.transformer.eval(), src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
+        output = beam.perform(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
         len = self.compute_sent_len(output)
 
         # TODO: pad the output?
