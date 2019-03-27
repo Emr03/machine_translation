@@ -144,7 +144,6 @@ class Trainer(ABC):
         :param sentences: batch_size, max_len
         :return:
         """
-        print("sentences", sentences)
         n_sent = sentences.shape[0]
         # TODO: make sure sentences end with eos
         eos_indices = (sentences == self.eos_index).nonzero()

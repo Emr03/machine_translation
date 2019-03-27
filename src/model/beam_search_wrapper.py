@@ -48,7 +48,7 @@ class MyBeamSearch:
     Returns: hypotheses (list[list[Tuple[Tensor]]]): Contains a tuple
             of score (float), sequence (long), and attention (float or None).
     '''
-    def perform(self, batch, src_mask, src_lang, tgt_lang):
+    def perform(self, batch, src_mask, src_lang, tgt_lang, random=False):
 	
         assert(batch.size(0) == self.batch_size)
         assert(len(batch.shape) == 2)
@@ -114,7 +114,20 @@ class MyBeamSearch:
                 print("current predictions" + str(self.beamSearch.current_predictions))
                 print("dec out", dec_out)
 
-        return self.beamSearch.hypotheses
+        # (batch_size) list of (beam_size) lists of tuples
+        hypotheses = self.beamSearch.hypotheses
+
+        # sample random hypotheses from top k
+        if random:
+            pass
+            # TODO:
+            # rand_h = np.random.randint(low=0, high=self.beam_size, size=self.batch_size)
+            # # for each element in hypotheses, get its sentence by indexing using rand_h
+            #
+            # map(lambda idx: hypotheses[idx], rand_h)
+
+        # return top hypothesis for each sentence in the batch
+        return list(map(lambda beams: beams[-1][1], hypotheses))
 
 if __name__ == "__main__":
 
@@ -132,8 +145,8 @@ if __name__ == "__main__":
     # check_all_data_params(data_params)
     transformer = Transformer(data_params=None, logger=getLogger(), embd_file=None).eval()
 
-    beam = MyBeamSearch(beam_size=3, batch_size=2, n_best=2,
+    beam = MyBeamSearch(transformer, beam_size=3, batch_size=2, n_best=2,
                         mb_device=torch.device("cpu"),
                         encoding_lengths=512, max_length=40)
 
-    print(beam.perform(transformer.eval(), x, src_m, src_lang=1, tgt_lang=1))
+    print(beam.perform(x, src_m, src_lang=1, tgt_lang=1))
