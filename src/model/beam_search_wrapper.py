@@ -103,16 +103,16 @@ class MyBeamSearch:
 
                 # get indices of expanded nodes, for each input sentence
                 select_indices = self.beamSearch.current_origin
-                print("select_indices", select_indices)
+                #print("select_indices", select_indices)
 
                 # select previous output of expanded nodes
                 dec_out = dec_out[select_indices]
-                print("dec_out", dec_out)
+                #print("dec_out", dec_out)
 
                 #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
                 dec_out = torch.cat((dec_out, next_word), 1)
-                print("current predictions" + str(self.beamSearch.current_predictions))
-                print("dec out", dec_out)
+                #print("current predictions" + str(self.beamSearch.current_predictions))
+                #print("dec out", dec_out)
 
         # (batch_size) list of (beam_size) lists of tuples
         hypotheses = self.beamSearch.hypotheses

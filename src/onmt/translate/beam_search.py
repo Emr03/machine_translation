@@ -153,7 +153,7 @@ class BeamSearch(DecodeStrategy):
         curr_scores = log_probs / length_penalty
         curr_scores = curr_scores.reshape(_B, self.beam_size * vocab_size)
 
-        print(curr_scores.requires_grad, self.topk_scores.requires_grad, self.topk_ids.requires_grad)
+        #print(curr_scores.requires_grad, self.topk_scores.requires_grad, self.topk_ids.requires_grad)
         torch.topk(curr_scores,  self.beam_size, dim=-1,
                    out=(self.topk_scores, self.topk_ids))
 
