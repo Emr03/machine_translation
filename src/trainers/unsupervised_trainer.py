@@ -28,6 +28,12 @@ class UnsupervisedTrainer(Trainer):
                                       src_lang=lang1,
                                       tgt_lang=lang2)
 
+        # for debugging
+        self.logger.debug("src batch", src_batch)
+        self.logger.debug("tgt batch", tgt_batch)
+        self.logger.debug("src mask", src_mask)
+        self.logger.debug("tgt mask", tgt_mask)
+
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
     def create_backtranslation_batch(self, batch_dict, src_lang, tgt_lang, add_noise=True):
