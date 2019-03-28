@@ -29,10 +29,10 @@ class UnsupervisedTrainer(Trainer):
                                       tgt_lang=lang2)
 
         # for debugging
-        self.print("src batch", src_batch)
-        self.print("tgt batch", tgt_batch)
-        self.print("src mask", src_mask)
-        self.print("tgt mask", tgt_mask)
+        print("src batch", src_batch)
+        print("tgt batch", tgt_batch)
+        print("src mask", src_mask)
+        print("tgt mask", tgt_mask)
 
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
