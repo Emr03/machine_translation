@@ -133,11 +133,11 @@ class Transformer(torch.nn.Module):
         if self.is_variational:
             latent = self.sample_z(mean=latent, n_samples=1)
 
-        dec_outputs = self.decoder(prev_output=prev_output,
-                                  enc_output=latent,
+        dec_outputs = self.decode(prev_output=prev_output,
+                                  latent_seq=latent,
                                   src_mask=src_mask,
                                   tgt_mask=tgt_mask,
-                                  lang_id=tgt_lang)
+                                  tgt_lang=tgt_lang)
 
         return dec_outputs
 

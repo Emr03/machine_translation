@@ -29,6 +29,7 @@ class UnsupervisedTrainer(Trainer):
                                       tgt_lang=lang2)
 
         # for debugging
+        print("output seq", output_seq)
         print("src batch", src_batch)
         print("tgt batch", tgt_batch)
         print("src mask", src_mask)
