@@ -116,18 +116,37 @@ class MyBeamSearch:
 
         # (batch_size) list of (beam_size) lists of tuples
         hypotheses = self.beamSearch.hypotheses
+        sentences, len = self.format_sentences(hypotheses=hypotheses)
+        return sentences, len
 
-        # sample random hypotheses from top k
+    def format_sentences(self, hypotheses, random=False):
+        """
+
+        :param hypotheses: list of lists
+        :param random:
+        :return:
+        """
+
+        # get lengths of sentences
         if random:
-            pass
-            # TODO:
-            # rand_h = np.random.randint(low=0, high=self.beam_size, size=self.batch_size)
-            # # for each element in hypotheses, get its sentence by indexing using rand_h
-            #
-            # map(lambda idx: hypotheses[idx], rand_h)
+            indices = np.random.randint(low=0, high=self.beam_size, size=self.batch_size)
+            sentences = list(map(lambda beams: beams[indices[i]][1]) for i, beams in enumerate(hypotheses))
+            lengths = torch.LongTensor([s[indices[i]].shape[0] + 2 for i, s in enumerate(hypotheses)])
 
-        # return top hypothesis for each sentence in the batch
-        return list(map(lambda beams: beams[-1][1], hypotheses))
+        else:
+            sentences = list(map(lambda beams: beams[-1][1], hypotheses))
+            lengths = torch.LongTensor([s.shape[0] + 2 for s in sentences])
+
+        # fill unused sentence spaces with pad token
+        sent = torch.LongTensor(lengths.size(0), lengths.max()).fill_(self.pad_index)
+
+        # copy sentence tokens, don't overwrite bos, add eos
+        for i, s in enumerate(sentences):
+            sent[i, 1:lengths[i] - 1, ].copy_(s)
+            sent[i, lengths[i] - 1] = self.eos_index
+
+        return sent, lengths
+
 
 if __name__ == "__main__":
 
@@ -149,4 +168,5 @@ if __name__ == "__main__":
                         mb_device=torch.device("cpu"),
                         encoding_lengths=512, max_length=40)
 
-    print(beam.perform(x, src_m, src_lang=1, tgt_lang=1))
+    sent, len = beam.perform(x, src_m, src_lang=1, tgt_lang=1)
+    print(sent, len)
