@@ -15,7 +15,7 @@ class MyBeamSearch:
         encoding_lengths: LongTensor of encoding lengths
         max_length: Longest acceptable sequence, not counting begin-of-sentence (presumably there has been no EOS yet if max_length is used as a cutoff)
     '''
-    def __init__(self, transformer, beam_size, batch_size, n_best,
+    def __init__(self, transformer, tgt_lang, beam_size, batch_size, n_best,
                  mb_device, encoding_lengths, max_length):
 
         self.batch_size = batch_size
@@ -24,7 +24,7 @@ class MyBeamSearch:
 
         self.pad_index = transformer.pad_index
         self.eos_index = transformer.eos_index
-        self.bos_index = transformer.bos_index
+        self.bos_index = transformer.bos_index[tgt_lang]
         self.id2lang = transformer.id2lang
         self.transformer = transformer
 

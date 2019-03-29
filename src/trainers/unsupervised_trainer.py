@@ -141,7 +141,7 @@ class UnsupervisedTrainer(Trainer):
         batch_size = src_batch.shape[0]
         assert(src_mask.shape[0] == batch_size)
 
-        beam = MyBeamSearch(self.transformer, beam_size=1, batch_size=batch_size, n_best=2,
+        beam = MyBeamSearch(self.transformer, tgt_lang, beam_size=1, batch_size=batch_size, n_best=2,
                             mb_device=self.device,
                             encoding_lengths=512, max_length=40)
 
