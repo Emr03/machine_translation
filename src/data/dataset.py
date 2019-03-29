@@ -37,7 +37,7 @@ class Dataset(object):
         sent = torch.LongTensor(lengths.max(), lengths.size(0)).fill_(self.pad_index)
 
         # fill beginning of sentences with language-specific bos token?
-        sent[0] = self.bos_index
+        sent[0] = self.bos_index[lang_id]
 
         # copy sentence tokens, don't overwrite bos, add eos
         for i, s in enumerate(sentences):
