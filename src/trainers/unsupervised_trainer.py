@@ -70,6 +70,9 @@ class UnsupervisedTrainer(Trainer):
 
         lm_iterators = [get_iter() for get_iter in get_lm_iterators]
 
+        get_para_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=False)
+        para_iterator = get_para_iterator()
+
         for i in range(n_iter):
 
             self.opt.zero_grad()
@@ -117,17 +120,30 @@ class UnsupervisedTrainer(Trainer):
             self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
 
             try:
+                loss.backward()
+                self.opt_step()
+
+            except Exception as e:
+            self.logger.debug("Exception in training loop")
+            self.logger.debug(e.message)
+
+            try:
 
                 if i % 50 == 0:
                     # print("iter ", i, "loss: ", loss)
                     self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
 
-                loss.backward()
-                self.opt_step()
+                    # TODO: add validation (with parallel and non-parallel)
+                    para_batch_dict = next(para_iterator)
 
-            except Exception as e:
-                self.logger.debug("Exception in training loop")
-                self.logger.debug(e.message)
+            except StopIteration:
+                # restart the iterator
+                get_para_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=True)
+                para_iterator = get_para_iterator()
+                para_batch_dict = next(para_iterator)
+
+            val_loss = self.reconstruction_loss(para_batch_dict, lang1=lang1, lang2=lang2)
+            self.logger.info("iter %i: val_loss %40.1f" % (i, val_loss.item()))
 
     def generate_parallel(self, src_batch, src_mask, src_lang, tgt_lang):
         """
