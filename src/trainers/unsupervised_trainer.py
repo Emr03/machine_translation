@@ -124,8 +124,8 @@ class UnsupervisedTrainer(Trainer):
                 self.opt_step()
 
             except Exception as e:
-            self.logger.debug("Exception in training loop")
-            self.logger.debug(e.message)
+                self.logger.debug("Exception in training loop")
+                self.logger.debug(e.message)
 
             try:
 
