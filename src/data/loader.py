@@ -105,7 +105,13 @@ def set_parameters(params, dico):
     pad_index = dico.index(PAD_WORD)
     unk_index = dico.index(UNK_WORD)
     blank_index = dico.index(SPECIAL_WORD % 0)
-    bos_index = dico.index(BOS_WORD)
+
+    """ Make bos index language agnostic """
+    # bos_index = dico.index(BOS_WORD)
+
+    """ Make bos index language specific """
+    bos_index = [dico.index(SPECIAL_WORD % (i + 1)) for i in range(params.n_langs)]
+
     print("bos_index", bos_index)
 
     if hasattr(params, 'eos_index'):

@@ -9,9 +9,9 @@ import copy
 
 class UnsupervisedTrainer(Trainer):
 
-    def __init__(self, transformer):
+    def __init__(self, transformer, parallel=True):
 
-        super().__init__(transformer)
+        super().__init__(transformer, parallel)
 
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
@@ -161,9 +161,9 @@ class UnsupervisedTrainer(Trainer):
             loss = self.translation_loss(batch_dict, lang1, lang2)
             self.logger.info("translation loss", loss)
 
-
 if __name__ == "__main__":
-    logger = create_logger("logs/para_trainer.log")
+
+    logger = create_logger("logs/unsupervised_trainer.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
@@ -171,39 +171,11 @@ if __name__ == "__main__":
                         init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec")
 
     trainer = UnsupervisedTrainer(model)
-    # test iterator
-    # get_iter = trainer.get_para_iterator(lang1=0, lang2=1, train=False, add_noise=False)
-    # iter = get_iter()
-
-    # batch_dict = next(iter)
-    # prev_output = batch_dict["prev_output"]
-    # tgt_mask = batch_dict["tgt_mask"]
-    # tgt_batch = batch_dict["tgt_batch"]
-    #
-    # print("prev_output", prev_output)
-    # print("tgt_mask", tgt_mask)
-    # print("tgt_batch", tgt_batch)
 
     trainer.train(10000)
-    trainer.save_model("en_fr.pth")
+    trainer.save_model("en_fr_nonpara.pth")
     logger.info("testing trained model")
     trainer.test(10)
     logger.info("testing loaded model")
-    trainer.load_model("en_fr.pth")
+    trainer.load_model("en_fr_nonpara.pth")
     trainer.test(10)
-
-if __name__ == "__main__":
-
-    parser = get_parser()
-    data_params = parser.parse_args()
-    check_all_data_params(data_params)
-    model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
-    trainer = Trainer(model)
-
-    src_batch, l = trainer.get_batch(lang=0)
-    trainer.translate(src_batch=src_batch,
-                      tgt_batch=None,
-                      src_lang=0,
-                      tgt_lang=1,
-                      beam_size=3,
-                      teacher_force=False)

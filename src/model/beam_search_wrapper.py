@@ -51,7 +51,7 @@ class MyBeamSearch:
     def perform(self, batch, src_mask, src_lang, tgt_lang, random=False):
 	
         assert(batch.size(0) == self.batch_size)
-        assert(len(batch.shape) == 2)
+        #assert(len(batch.shape) == 2)
         transformer = self.transformer.eval()
 
         # disable gradient tracking
