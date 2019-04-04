@@ -4,7 +4,7 @@ from src.onmt.translate.beam_search import BeamSearch
 from logging import getLogger
 from src.utils.beam_search_utils import tile
 
-class MyBeamSearch:
+class MyBeamSearch(torch.nn.Module):
     '''
     Wrapper around OpenNMT beam search that suits our purposes
         dico: the dictionary of vocabulary
@@ -48,7 +48,7 @@ class MyBeamSearch:
     Returns: hypotheses (list[list[Tuple[Tensor]]]): Contains a tuple
             of score (float), sequence (long), and attention (float or None).
     '''
-    def perform(self, batch, src_mask, src_lang, tgt_lang, random=False):
+    def forward(self, batch, src_mask, src_lang, tgt_lang, random=False):
 	
         assert(batch.size(0) == self.batch_size)
         #assert(len(batch.shape) == 2)
