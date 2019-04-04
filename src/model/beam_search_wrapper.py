@@ -22,10 +22,10 @@ class MyBeamSearch:
         self.beam_size = beam_size
         self.max_length = max_length
 
-        self.pad_index = transformer.pad_index
-        self.eos_index = transformer.eos_index
-        self.bos_index = transformer.bos_index[tgt_lang]
-        self.id2lang = transformer.id2lang
+        self.pad_index = transformer.module.pad_index
+        self.eos_index = transformer.module.eos_index
+        self.bos_index = transformer.module.bos_index[tgt_lang]
+        self.id2lang = transformer.module.id2lang
         self.transformer = transformer
 
         #pad, bos, and eos are based on values from Dictionary.py.
