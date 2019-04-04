@@ -26,7 +26,7 @@ class MyBeamSearch:
         self.eos_index = transformer.module.eos_index
         self.bos_index = transformer.module.bos_index[tgt_lang]
         self.id2lang = transformer.module.id2lang
-        self.transformer = transformer
+        self.transformer = transformer.module
 
         #pad, bos, and eos are based on values from Dictionary.py.
         # GMTGlobalScorer for length penalty
