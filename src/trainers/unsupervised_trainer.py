@@ -167,7 +167,24 @@ class UnsupervisedTrainer(Trainer):
             beam_search.to(self.device)
 
         output, len = beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
+
+        # For verification, what does an output sample look like?
+        self.indices_to_words(output[0, :], tgt_lang)
         return output, len
+
+    def indices_to_words(self, sent, lang):
+        """
+
+        :param sent: 1 x len tensor of a sample sentence, holds indices of words
+        :lang: language id
+        :return: prints sentence words
+        """
+        input = []
+        for i in range(sent.size(1)):
+            idx = sent[:, i].item()
+            input.append(self.data['dico'][self.id2lang[lang]][idx])
+
+        print("sample sentence", input)
 
     def test(self, n_tests):
         self.transformer.eval()
