@@ -18,6 +18,7 @@ class MyBeamSearch(torch.nn.Module):
     def __init__(self, transformer, tgt_lang, beam_size, batch_size, n_best,
                  mb_device, encoding_lengths, max_length):
 
+        super(MyBeamSearch).__init__()
         self.batch_size = batch_size
         self.beam_size = beam_size
         self.max_length = max_length
