@@ -54,6 +54,9 @@ class MyBeamSearch(torch.nn.Module):
 
         #assert(batch.size(0) == self.batch_size)
         print("batch size in beam search", batch.size(0))
+
+        # use size of received batch, for parallel mode
+        batch_size = batch.size(0)
         transformer = self.transformer.eval()
 
         # disable gradient tracking
@@ -70,7 +73,7 @@ class MyBeamSearch(torch.nn.Module):
 
             # dec_output should be batch_size x beam_size, dec_seq_len
             # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
-            dec_out = torch.ones(self.batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index
+            dec_out = torch.ones(batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index
             dec_out = dec_out.to(self.device)
 
             # sanity check
