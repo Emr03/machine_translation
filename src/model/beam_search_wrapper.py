@@ -52,7 +52,7 @@ class MyBeamSearch(torch.nn.Module):
     '''
     def forward(self, batch, src_mask, src_lang, tgt_lang, random=False):
 
-        assert(batch.size(0) == self.batch_size)
+        #assert(batch.size(0) == self.batch_size)
         transformer = self.transformer.eval()
 
         # disable gradient tracking
