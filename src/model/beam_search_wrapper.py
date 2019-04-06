@@ -135,12 +135,12 @@ class MyBeamSearch(torch.nn.Module):
 
         # (batch_size) list of (beam_size) lists of tuples
         hypotheses = beamSearch.hypotheses
-        print("hypotheses ", hypotheses[0][0][1].device)
-        sentences, len = self.format_sentences(hypotheses=hypotheses, device=batch.device)
-        print("sentences ", sentences.device)
+        sentences, len = self.format_sentences(hypotheses=hypotheses,
+                                               tgt_lang=tgt_lang,
+                                               device=batch.device)
         return sentences, len
 
-    def format_sentences(self, hypotheses, device, random=False):
+    def format_sentences(self, hypotheses, device, tgt_lang, random=False):
         """
 
         :param hypotheses: list of lists
@@ -163,7 +163,8 @@ class MyBeamSearch(torch.nn.Module):
 
         # copy sentence tokens, don't overwrite bos, add eos
         for i, s in enumerate(sentences):
-            sent[i, 1:lengths[i] - 1, ].copy_(s)
+            sent[i, 0] = self.bos_index[tgt_lang]
+            sent[i, 1:lengths[i] - 1].copy_(s)
             sent[i, lengths[i] - 1] = self.eos_index
 
         return sent, lengths
