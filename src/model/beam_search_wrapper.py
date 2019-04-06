@@ -53,6 +53,7 @@ class MyBeamSearch(torch.nn.Module):
         #assert(batch.size(0) == self.batch_size)
         print("in beam search ", batch.size(0))
 
+        # if parallel, each BeamSearch object lives on the device of the input batch
         beamSearch = BeamSearch(self.beam_size, batch_size,
                                      pad=self.pad_index,
                                      bos=self.bos_index[tgt_lang],
@@ -83,7 +84,9 @@ class MyBeamSearch(torch.nn.Module):
 
             # dec_output should be batch_size x beam_size, dec_seq_len
             # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
-            dec_out = torch.ones(batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index[tgt_lang]
+            dec_out = torch.ones(batch_size*self.beam_size, 1,
+                                 dtype=torch.int64,
+                                 device=batch.device)*self.bos_index[tgt_lang]
 
             # sanity check
             # print("sanity check")
