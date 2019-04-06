@@ -155,6 +155,7 @@ class UnsupervisedTrainer(Trainer):
         """
 
         batch_size = src_batch.shape[0]
+        print("batch size in trainer ", batch_size)
         #assert(src_mask.shape[0] == batch_size)
 
         beam_search = MyBeamSearch(self.transformer, tgt_lang, beam_size=1,
