@@ -69,7 +69,7 @@ class MyBeamSearch(torch.nn.Module):
         with torch.set_grad_enabled(False):
 
             # (1) Run the encoder on the src.
-            enc_out = transformer.encoder(input_sequence=batch,
+            enc_out = self.transformer.encoder(input_sequence=batch,
                                           src_mask=src_mask,
                                           src_lang=src_lang)
 
@@ -98,7 +98,7 @@ class MyBeamSearch(torch.nn.Module):
                 # print("decoder_input", decoder_input.shape)
 
                 # in case of inference tgt_len = 1, batch = beam times batch_size
-                log_probs = transformer.decode(dec_out, enc_out, src_mask,
+                log_probs = self.transformer.decode(dec_out, enc_out, src_mask,
                                                tgt_mask=None, tgt_lang=tgt_lang)[:, -1, :]
 
                 log_probs = F.log_softmax(log_probs, dim=-1)
