@@ -50,9 +50,8 @@ class MyBeamSearch(torch.nn.Module):
             of score (float), sequence (long), and attention (float or None).
     '''
     def forward(self, batch, src_mask, src_lang, tgt_lang, random=False):
-	
+
         assert(batch.size(0) == self.batch_size)
-        #assert(len(batch.shape) == 2)
         transformer = self.transformer.eval()
 
         # disable gradient tracking
@@ -70,6 +69,9 @@ class MyBeamSearch(torch.nn.Module):
             # dec_output should be batch_size x beam_size, dec_seq_len
             # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
             dec_out = torch.ones(self.batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index
+            print("dec_out", dec_out.device)
+            dec_out = dec_out.to(self.device)
+            print("dec_out", dec_out.device)
 
             # sanity check
             # print("sanity check")
