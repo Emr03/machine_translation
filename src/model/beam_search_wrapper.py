@@ -126,7 +126,9 @@ class MyBeamSearch(torch.nn.Module):
                 #print("select_indices", select_indices)
 
                 # select previous output of expanded nodes
+                self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 dec_out = dec_out[select_indices]
+                self.logger.info("select_indices %s" %(','.join(map(str, select_indices.data))))
                 self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 #print("dec_out", dec_out)
 
