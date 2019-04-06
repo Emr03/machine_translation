@@ -83,6 +83,7 @@ class MyBeamSearch(torch.nn.Module):
 
             # dec_output should be batch_size x beam_size, dec_seq_len
             # in this first case it should be batch_size x 1 x hidden_size since it's just the first word generated
+            print("self.beam_size", self.beam_size)
             dec_out = torch.ones(batch_size*self.beam_size, 1, dtype=torch.int64)*self.bos_index
             dec_out = dec_out.to(self.device)
 
