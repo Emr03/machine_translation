@@ -75,7 +75,7 @@ class MyBeamSearch(torch.nn.Module):
                                           src_mask=src_mask,
                                           src_lang=src_lang)
 
-            self.logger.info("enc_out batch size", enc_out.size(0))
+            self.logger.info("enc_out batch size %i " % (enc_out.size(0)))
 
             # (2) Repeat src objects `beam_size` times. along dim 0
             # We use batch_size x beam_size
@@ -127,7 +127,7 @@ class MyBeamSearch(torch.nn.Module):
 
                 # select previous output of expanded nodes
                 dec_out = dec_out[select_indices]
-                self.logger.info("dec_out batch size", dec_out.size(0))
+                self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 #print("dec_out", dec_out)
 
                 #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size

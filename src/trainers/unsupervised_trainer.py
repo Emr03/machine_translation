@@ -28,7 +28,7 @@ class UnsupervisedTrainer(Trainer):
                                       src_lang=lang1,
                                       tgt_lang=lang2)
 
-        self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=self.logger, 
+        self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=self.logger,
                                    n_best=1, encoding_lengths=512, max_length=175)
 
         if self.parallel:
