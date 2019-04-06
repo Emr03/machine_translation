@@ -159,11 +159,12 @@ class UnsupervisedTrainer(Trainer):
         #assert(src_mask.shape[0] == batch_size)
 
         beam_search = MyBeamSearch(self.transformer, tgt_lang, beam_size=1,
-                                   batch_size=batch_size, n_best=2,
-                                   mb_device=self.device,
+                                   batch_size=batch_size, n_best=1,
+                                   device=self.device,
                                    encoding_lengths=512, max_length=175)
 
         if self.parallel:
+            # self.device is the main device where stuff is aggregated
             beam_search = torch.nn.DataParallel(beam_search)
             beam_search.to(self.device)
 

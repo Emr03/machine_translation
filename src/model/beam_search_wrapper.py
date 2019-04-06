@@ -3,6 +3,7 @@ from src.onmt.translate.beam import *
 from src.onmt.translate.beam_search import BeamSearch
 from logging import getLogger
 from src.utils.beam_search_utils import tile
+import torch.nn as nn
 
 class MyBeamSearch(torch.nn.Module):
     '''
@@ -16,33 +17,23 @@ class MyBeamSearch(torch.nn.Module):
         max_length: Longest acceptable sequence, not counting begin-of-sentence (presumably there has been no EOS yet if max_length is used as a cutoff)
     '''
     def __init__(self, transformer, tgt_lang, beam_size, batch_size, n_best,
-                 mb_device, encoding_lengths, max_length):
+                 devices, encoding_lengths, max_length):
 
         super(MyBeamSearch, self).__init__()
         self.batch_size = batch_size
         self.beam_size = beam_size
         self.max_length = max_length
+        self.devices = devices
 
         self.pad_index = transformer.module.pad_index
         self.eos_index = transformer.module.eos_index
         self.bos_index = transformer.module.bos_index[tgt_lang]
         self.id2lang = transformer.module.id2lang
-        self.transformer = transformer.module
-        self.device = mb_device
+        self.transformer = transformer.module.eval()
 
-        #pad, bos, and eos are based on values from Dictionary.py.
-        # GMTGlobalScorer for length penalty
-        # TODO: what is n_best?
-        self.beamSearch = BeamSearch(beam_size, batch_size,
-                                     pad=self.pad_index, bos=self.bos_index,
-                                     eos=self.eos_index,
-                                     n_best=n_best, mb_device=mb_device,
-                                     global_scorer=GNMTGlobalScorer(0.7, 0., "avg", "none"),
-                                     min_length=0, max_length=max_length, return_attention=False,
-                                     block_ngram_repeat=0,
-                                     exclusion_tokens=set(),
-                                     memory_lengths=encoding_lengths,
-                                     stepwise_penalty=False, ratio=0.)
+        self.n_best = n_best
+        self.encoding_lengths = encoding_lengths
+        self.max_length = max_length
 
     '''
     Performs beam search on a batch of sequences
@@ -52,18 +43,38 @@ class MyBeamSearch(torch.nn.Module):
     '''
     def forward(self, batch, src_mask, src_lang, tgt_lang, random=False):
 
-        #assert(batch.size(0) == self.batch_size)
-        print("batch size in beam search", batch.size(0))
-
-        # use size of received batch, for parallel mode
         batch_size = batch.size(0)
-        transformer = self.transformer.eval()
+
+        # get device
+        if batch.is_cuda:
+            device = batch.get_device()
+
+        else:
+            device = torch.device('cpu')
+
+        #assert(batch.size(0) == self.batch_size)
+        print("in beam search ", batch.size(0))
+
+        beamSearch = BeamSearch(self.beam_size, batch_size,
+                                     pad=self.pad_index, bos=self.bos_index,
+                                     eos=self.eos_index,
+                                     n_best=self.n_best, mb_device=device,
+                                     global_scorer=GNMTGlobalScorer(0.7, 0., "avg", "none"),
+                                     min_length=0, max_length=self.max_length, return_attention=False,
+                                     block_ngram_repeat=0,
+                                     exclusion_tokens=set(),
+                                     memory_lengths=self.encoding_lengths,
+                                     stepwise_penalty=False, ratio=0.)
 
         # disable gradient tracking
         with torch.set_grad_enabled(False):
 
             # (1) Run the encoder on the src.
-            enc_out = transformer.encode(batch, src_mask, src_lang)
+            enc_out = transformer.encoder(input_sequence=batch,
+                                          src_mask=src_mask,
+                                          src_lang=src_lang)
+
+            print("enc out", enc_out.size(0))
 
             # (2) Repeat src objects `beam_size` times. along dim 0
             # We use batch_size x beam_size
