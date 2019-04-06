@@ -117,13 +117,11 @@ class MyBeamSearch(torch.nn.Module):
                         break
 
                 # get chosen words by beam search
-                print("current predictions", beamSearch.current_predictions)
                 next_word = beamSearch.current_predictions.unsqueeze_(-1)
                 #next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
 
                 # get indices of expanded nodes, for each input sentence
                 select_indices = beamSearch.current_origin
-                print("select indices", select_indices)
                 #print("select_indices", select_indices)
 
                 # select previous output of expanded nodes
@@ -136,7 +134,7 @@ class MyBeamSearch(torch.nn.Module):
                 #print("dec out", dec_out)
 
         # (batch_size) list of (beam_size) lists of tuples
-        hypotheses = self.beamSearch.hypotheses
+        hypotheses = beamSearch.hypotheses
         sentences, len = self.format_sentences(hypotheses=hypotheses)
         return sentences, len
 
