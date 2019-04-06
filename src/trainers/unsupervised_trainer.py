@@ -160,7 +160,7 @@ class UnsupervisedTrainer(Trainer):
         beam_search = MyBeamSearch(self.transformer, tgt_lang, beam_size=1,
                                    batch_size=batch_size, n_best=2,
                                    mb_device=self.device,
-                                   encoding_lengths=512, max_length=40)
+                                   encoding_lengths=512, max_length=175)
 
         if self.parallel:
             beam_search = torch.nn.DataParallel(beam_search)
