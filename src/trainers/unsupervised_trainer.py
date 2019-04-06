@@ -88,7 +88,7 @@ class UnsupervisedTrainer(Trainer):
 
             # get lm loss for lang 1
             loss = self.reconstruction_loss(batch_dict=lang_batch_dict, lang1=lang1, lang2=lang1)
-            self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+            self.logger.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
 
             # the same for back-translation
             back_batch_dict = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
@@ -96,7 +96,7 @@ class UnsupervisedTrainer(Trainer):
                                                               tgt_lang=lang2)
 
             loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang2, lang2=lang1)
-            self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+            self.logger.info("iter %i: back translation loss %40.1f" % (i, loss.item()))
 
             try:
                 lang_batch_dict = next(lm_iterators[1])
@@ -109,7 +109,7 @@ class UnsupervisedTrainer(Trainer):
 
             # get lm loss for lang 2
             loss += self.reconstruction_loss(batch_dict=lang_batch_dict, lang1=lang2, lang2=lang2)
-            self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+            self.logger.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
 
             # the same for back-translation
             back_batch_dict = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
@@ -117,7 +117,7 @@ class UnsupervisedTrainer(Trainer):
                                                                 tgt_lang=lang1)
 
             loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang1, lang2=lang2)
-            self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+            self.logger.info("iter %i: backtranslation loss %40.1f" % (i, loss.item()))
 
             try:
                 loss.backward()
