@@ -102,10 +102,12 @@ class MyBeamSearch(torch.nn.Module):
 
                 # get chosen words by beam search
                 print("current predictions", self.beamSearch.current_predictions)
-                next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
+                next_word = self.beamSearch.current_predictions
+                #next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
 
                 # get indices of expanded nodes, for each input sentence
                 select_indices = self.beamSearch.current_origin
+                print("select indices", select_indices)
                 #print("select_indices", select_indices)
 
                 # select previous output of expanded nodes
