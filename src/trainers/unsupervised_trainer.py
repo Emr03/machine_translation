@@ -169,7 +169,7 @@ class UnsupervisedTrainer(Trainer):
         output, len = beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
 
         # For verification, what does an output sample look like?
-        self.indices_to_words(output[0, :], tgt_lang)
+        self.indices_to_words(output[0, :].unsqueeze_(0), tgt_lang)
         return output, len
 
     def indices_to_words(self, sent, lang):
