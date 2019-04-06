@@ -69,7 +69,7 @@ class MyBeamSearch(torch.nn.Module):
         with torch.set_grad_enabled(False):
 
             # (1) Run the encoder on the src.
-            enc_out = self.transformer.encoder(input_sequence=batch,
+            enc_out = self.transformer.encode(batch,
                                           src_mask=src_mask,
                                           src_lang=src_lang)
 
