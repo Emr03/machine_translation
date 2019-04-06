@@ -157,11 +157,16 @@ class UnsupervisedTrainer(Trainer):
         batch_size = src_batch.shape[0]
         assert(src_mask.shape[0] == batch_size)
 
-        beam = MyBeamSearch(self.transformer, tgt_lang, beam_size=1, batch_size=batch_size, n_best=2,
-                            mb_device=self.device,
-                            encoding_lengths=512, max_length=40)
+        beam_search = MyBeamSearch(self.transformer, tgt_lang, beam_size=1,
+                                   batch_size=batch_size, n_best=2,
+                                   mb_device=self.device,
+                                   encoding_lengths=512, max_length=40)
 
-        output, len = beam.perform(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
+        if self.parallel:
+            beam_search = torch.nn.DataParallel(beam_search)
+            beam_search.to(self.device)
+
+        output, len = beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
         return output, len
 
     def test(self, n_tests):
