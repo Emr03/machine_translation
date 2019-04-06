@@ -107,22 +107,22 @@ class MyBeamSearch(torch.nn.Module):
                 #print("log probs", log_probs.shape)
 
                 #advance takes input of size batch_size*beam_size x vocab_size
-                self.beamSearch.advance(log_probs, None)
+                beamSearch.advance(log_probs, None)
 
                 # check if any beam is finished (last output selected was eos)
-                any_beam_is_finished = self.beamSearch.is_finished.any()
+                any_beam_is_finished = beamSearch.is_finished.any()
                 if any_beam_is_finished:
-                    self.beamSearch.update_finished()
-                    if self.beamSearch.done:
+                    beamSearch.update_finished()
+                    if beamSearch.done:
                         break
 
                 # get chosen words by beam search
-                print("current predictions", self.beamSearch.current_predictions)
-                next_word = self.beamSearch.current_predictions.unsqueeze_(-1)
+                print("current predictions", beamSearch.current_predictions)
+                next_word = beamSearch.current_predictions.unsqueeze_(-1)
                 #next_word = self.beamSearch.current_predictions.view(self.batch_size*self.beam_size, -1)
 
                 # get indices of expanded nodes, for each input sentence
-                select_indices = self.beamSearch.current_origin
+                select_indices = beamSearch.current_origin
                 print("select indices", select_indices)
                 #print("select_indices", select_indices)
 
