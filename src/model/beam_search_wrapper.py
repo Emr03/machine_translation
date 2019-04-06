@@ -135,7 +135,9 @@ class MyBeamSearch(torch.nn.Module):
 
         # (batch_size) list of (beam_size) lists of tuples
         hypotheses = beamSearch.hypotheses
+        print("hypotheses ", hypotheses[0][0][1].device)
         sentences, len = self.format_sentences(hypotheses=hypotheses)
+        print("sentences ", sentences.device)
         return sentences, len
 
     def format_sentences(self, hypotheses, random=False):
