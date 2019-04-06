@@ -152,14 +152,14 @@ class MyBeamSearch(torch.nn.Module):
         if random:
             indices = np.random.randint(low=0, high=self.beam_size, size=self.batch_size)
             sentences = list(map(lambda beams: beams[indices[i]][1]) for i, beams in enumerate(hypotheses))
-            lengths = torch.LongTensor([s[indices[i]].shape[0] + 2 for i, s in enumerate(hypotheses)], device=device)
+            lengths = torch.cuda.LongTensor([s[indices[i]].shape[0] + 2 for i, s in enumerate(hypotheses)], device=device)
 
         else:
             sentences = list(map(lambda beams: beams[-1][1], hypotheses))
-            lengths = torch.LongTensor([s.shape[0] + 2 for s in sentences], device=device)
+            lengths = torch.cuda.LongTensor([s.shape[0] + 2 for s in sentences], device=device)
 
         # fill unused sentence spaces with pad token
-        sent = torch.LongTensor(lengths.size(0), lengths.max(), device=device).fill_(self.pad_index)
+        sent = torch.cuda.LongTensor(lengths.size(0), lengths.max(), device=device).fill_(self.pad_index)
 
         # copy sentence tokens, don't overwrite bos, add eos
         for i, s in enumerate(sentences):
