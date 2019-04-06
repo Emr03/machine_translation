@@ -16,18 +16,16 @@ class MyBeamSearch(torch.nn.Module):
         encoding_lengths: LongTensor of encoding lengths
         max_length: Longest acceptable sequence, not counting begin-of-sentence (presumably there has been no EOS yet if max_length is used as a cutoff)
     '''
-    def __init__(self, transformer, tgt_lang, beam_size, batch_size, n_best,
-                 devices, encoding_lengths, max_length):
+    def __init__(self, transformer, beam_size, n_best,
+                 encoding_lengths, max_length):
 
         super(MyBeamSearch, self).__init__()
-        self.batch_size = batch_size
         self.beam_size = beam_size
         self.max_length = max_length
-        self.devices = devices
 
         self.pad_index = transformer.module.pad_index
         self.eos_index = transformer.module.eos_index
-        self.bos_index = transformer.module.bos_index[tgt_lang]
+        self.bos_index = transformer.module.bos_index
         self.id2lang = transformer.module.id2lang
         self.transformer = transformer.module.eval()
 
@@ -56,7 +54,8 @@ class MyBeamSearch(torch.nn.Module):
         print("in beam search ", batch.size(0))
 
         beamSearch = BeamSearch(self.beam_size, batch_size,
-                                     pad=self.pad_index, bos=self.bos_index,
+                                     pad=self.pad_index,
+                                     bos=self.bos_index[tgt_lang],
                                      eos=self.eos_index,
                                      n_best=self.n_best, mb_device=device,
                                      global_scorer=GNMTGlobalScorer(0.7, 0., "avg", "none"),

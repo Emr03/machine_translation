@@ -28,6 +28,15 @@ class UnsupervisedTrainer(Trainer):
                                       src_lang=lang1,
                                       tgt_lang=lang2)
 
+        self.beam_search = MyBeamSearch(self.transformer, beam_size=1,
+                                   n_best=1, encoding_lengths=512, max_length=175)
+
+        if self.parallel:
+            # self.device is the main device where stuff is aggregated
+            self.beam_search = torch.nn.DataParallel(self.beam_search)
+
+        self.beam_search.to(self.device)
+
         return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
     def create_backtranslation_batch(self, batch_dict, src_lang, tgt_lang, add_noise=True):
@@ -158,17 +167,7 @@ class UnsupervisedTrainer(Trainer):
         print("batch size in trainer ", batch_size)
         #assert(src_mask.shape[0] == batch_size)
 
-        beam_search = MyBeamSearch(self.transformer, tgt_lang, beam_size=1,
-                                   batch_size=batch_size, n_best=1,
-                                   device=self.device,
-                                   encoding_lengths=512, max_length=175)
-
-        if self.parallel:
-            # self.device is the main device where stuff is aggregated
-            beam_search = torch.nn.DataParallel(beam_search)
-            beam_search.to(self.device)
-
-        output, len = beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
+        output, len = self.beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
 
         # For verification, what does an output sample look like?
         self.indices_to_words(output[0, :].unsqueeze_(0), tgt_lang)
