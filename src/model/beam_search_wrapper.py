@@ -125,6 +125,7 @@ class MyBeamSearch(torch.nn.Module):
                 #self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 dec_out = dec_out[select_indices]
                 enc_out = enc_out[select_indices]
+                src_mask = src_mask[select_indices]
                 # self.logger.info("select_indices %s" %(','.join(map(str, select_indices.data))))
                 # self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 #print("dec_out", dec_out)
@@ -187,9 +188,8 @@ if __name__ == "__main__":
     # check_all_data_params(data_params)
     transformer = Transformer(data_params=None, logger=getLogger(), embd_file=None).eval()
 
-    beam = MyBeamSearch(transformer, beam_size=3, batch_size=2, n_best=2,
-                        mb_device=torch.device("cpu"),
-                        encoding_lengths=512, max_length=40)
+    beam = MyBeamSearch(transformer, beam_size=3, n_best=2,
+                        encoding_lengths=512, max_length=40, logger=None)
 
-    sent, len = beam.perform(x, src_m, src_lang=1, tgt_lang=1)
+    sent, len = beam(x, src_m, src_lang=1, tgt_lang=1)
     print(sent, len)
