@@ -75,7 +75,7 @@ class MyBeamSearch(torch.nn.Module):
                                           src_mask=src_mask,
                                           src_lang=src_lang)
 
-            self.logger.info("enc_out batch size %i " % (enc_out.size(0)))
+            #self.logger.info("enc_out batch size %i " % (enc_out.size(0)))
 
             # (2) Repeat src objects `beam_size` times. along dim 0
             # We use batch_size x beam_size
@@ -88,12 +88,6 @@ class MyBeamSearch(torch.nn.Module):
             dec_out = torch.ones(batch_size*self.beam_size, 1,
                                  dtype=torch.int64,
                                  device=batch.device)*self.bos_index[tgt_lang]
-
-            # sanity check
-            # print("sanity check")
-            # print(self.beamSearch.current_predictions)
-            # print(self.beamSearch.current_origin)
-            # dec_out = self.beamSearch.current_predictions.view(-1, 1)
 
             for step in range(self.max_length):
 
@@ -128,12 +122,11 @@ class MyBeamSearch(torch.nn.Module):
                 #print("select_indices", select_indices)
 
                 # select previous output of expanded nodes
-                self.logger.info("dec_out", dec_out)
-                self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
+                #self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 dec_out = dec_out[select_indices]
                 enc_out = enc_out[select_indices]
-                self.logger.info("select_indices %s" %(','.join(map(str, select_indices.data))))
-                self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
+                # self.logger.info("select_indices %s" %(','.join(map(str, select_indices.data))))
+                # self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 #print("dec_out", dec_out)
 
                 #dec out should be batch_size x (previous_sentence_len + 1) x hidden_size
