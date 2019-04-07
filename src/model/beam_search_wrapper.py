@@ -111,6 +111,8 @@ class MyBeamSearch(torch.nn.Module):
                 beamSearch.advance(log_probs, None)
 
                 # check if any beam is finished (last output selected was eos)
+                # note that this removes this node from select_indices
+                # also adds the sentence to list of hypetheses, so you don't need to deal with it anymore
                 any_beam_is_finished = beamSearch.is_finished.any()
                 if any_beam_is_finished:
                     beamSearch.update_finished()
@@ -129,6 +131,7 @@ class MyBeamSearch(torch.nn.Module):
                 self.logger.info("dec_out", dec_out)
                 self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 dec_out = dec_out[select_indices]
+                enc_out = enc_out[select_indices]
                 self.logger.info("select_indices %s" %(','.join(map(str, select_indices.data))))
                 self.logger.info("dec_out batch size %i" % (dec_out.size(0)))
                 #print("dec_out", dec_out)
