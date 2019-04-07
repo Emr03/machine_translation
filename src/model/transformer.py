@@ -119,7 +119,7 @@ class Transformer(torch.nn.Module):
         # make sigma a diagonal matrix of shape batch size, seq len, dim, dim
         sigma = self.compute_sigma(mean)
         sigma = sigma.unsqueeze(-1).expand(*sigma.size(), self.d_model)
-        sigma = sigma * torch.eye(self.d_model)
+        sigma = sigma * torch.eye(self.d_model, device=sigma.device)
 
         z = torch.distributions.MultivariateNormal(loc=mean, covariance_matrix=sigma)
 
