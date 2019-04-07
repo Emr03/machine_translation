@@ -207,7 +207,7 @@ if __name__ == "__main__":
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     model = Transformer(data_params=data_params, logger=logger,
-                        init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec")
+                        init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec", is_variational=True)
 
     trainer = UnsupervisedTrainer(model)
 
