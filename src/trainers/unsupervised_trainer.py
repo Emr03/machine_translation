@@ -166,6 +166,7 @@ class UnsupervisedTrainer(Trainer):
                 if i % 50 == 0:
                     # print("iter ", i, "loss: ", loss)
                     self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+                    trainer.save_model("en_fr_nonpara_variational.pth")
 
                     # TODO: add validation (with parallel and non-parallel)
                     para_batch_dict = next(para_iterator)
@@ -236,7 +237,7 @@ if __name__ == "__main__":
 
     trainer = UnsupervisedTrainer(model)
 
-    trainer.train(20000)
+    trainer.train(50000)
     trainer.save_model("en_fr_nonpara_variational.pth")
     # logger.info("testing trained model")
     # trainer.test(10)

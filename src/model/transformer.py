@@ -8,7 +8,10 @@ from torch.distributions.kl import kl_divergence
 class Transformer(torch.nn.Module):
 
     def __init__(self, data_params, logger,
-                 embd_file=None, init_emb=True, is_shared_emb=True, is_variational=False):
+                 embd_file=None, init_emb=True,
+                 is_shared_emb=True,
+                 is_variational=False,
+                 use_word_drop=True):
         """
         :param n_langs: number of supported languages
         :param is_shared_emb: languages use shared embeddings
@@ -24,12 +27,15 @@ class Transformer(torch.nn.Module):
 
         self.is_shared_emb = is_shared_emb
         self.is_variational = is_variational
+        self.use_word_drop = use_word_drop
+        self.word_drop = params["word_drop"]
 
         # will be set in load_data
         self.data = None
         self.bos_index = None
         self.eos_index = None
         self.pad_index = None
+        self.blank_index = None
         self.noise_model = None
         self.languages = None
         self.dictionaries = None
@@ -47,6 +53,7 @@ class Transformer(torch.nn.Module):
             self.bos_index = 0
             self.eos_index = 1
             self.pad_index = 2
+            self.blank_index = 4
 
         self.encoder = StackedEncoder(n_layers=self.n_layers,
                                       params=params,
@@ -179,6 +186,26 @@ class Transformer(torch.nn.Module):
         else:
             return dec_outputs
 
+    def word_dropout(self, prev_output, lang_id):
+
+        if self.word_drop == 0:
+            return prev_output
+
+        assert 0 < self.word_drop < 1
+
+        # define words to blank
+        bos_index = self.bos_index[lang_id]
+        assert (prev_output[:, 0] == bos_index)
+
+        keep = np.random.rand(prev_output.size(0), prev_output.size(1) - 1) >= self.word_drop
+        keep[:, 0] = 1  # do not blank the start sentence symbol
+
+        prev_output_new = torch.ones_like(prev_output)*self.blank_index
+        prev_output_new[:, 0] = self.bos_index
+        prev_output_new[:, 1:] = prev_output*keep
+
+        return prev_output_new
+
     def load_data(self, data_params):
 
         all_data = load_data(data_params)
@@ -196,6 +223,7 @@ class Transformer(torch.nn.Module):
         self.pad_index = data_params.pad_index
         self.eos_index = data_params.eos_index
         self.bos_index = data_params.bos_index
+        self.blank_index = data_params.blank_index
 
         print("pad_index", self.pad_index)
         print("eos_index", self.eos_index)

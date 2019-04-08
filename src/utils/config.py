@@ -33,5 +33,10 @@ flags.DEFINE_float(
     "dropout", default=0.1, help="dropout parameter"
 )
 
+flags.DEFINE_float(
+    "word_drop", default=0.2, help="dropout parameter"
+)
+
+
 FLAGS = flags.FLAGS
 params = FLAGS.flag_values_dict()
