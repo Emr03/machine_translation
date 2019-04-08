@@ -48,6 +48,8 @@ class UnsupervisedTrainer(Trainer):
 
             if self.parallel:
                 print("kl_div ", kl_div)
+                print("dec_out ", output_seq)
+                print("loss ", loss)
                 kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
                 
             loss += self.kl_cost*kl_div
@@ -176,7 +178,7 @@ class UnsupervisedTrainer(Trainer):
 
             except Exception as e:
                 self.logger.debug("Exception in training loop")
-                self.logger.debug(e.message)
+                self.logger.exception("message")
 
             try:
 
