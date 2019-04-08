@@ -77,9 +77,6 @@ class Transformer(torch.nn.Module):
                                                      torch.nn.Linear(self.d_model, self.d_model),
                                                      torch.nn.Softplus())
 
-            self.prior = torch.distributions.MultivariateNormal(loc=torch.zeros(self.d_model),
-                                                                covariance_matrix=torch.eye(self.d_model))
-
         def init_weights(m):
 
             if type(m) == torch.nn.Linear:
@@ -142,6 +139,8 @@ class Transformer(torch.nn.Module):
         # reparameterization trick
         shift_dist = torch.distributions.MultivariateNormal(loc=torch.zeros_like(sent_emb), covariance_matrix=sigma)
         posterior = torch.distributions.MultivariateNormal(loc=sent_emb, covariance_matrix=sigma)
+        prior = torch.distributions.MultivariateNormal(loc=torch.zeros(self.d_model, device=sent_emb.device),
+                                                       covariance_matrix=torch.eye(self.d_model, device=sent_emb.device))
 
         # samples z using reparameterization trick, the gradient will be propagated back
         shift = shift_dist.rsample(sample_shape=torch.Size([n_samples]))
@@ -157,7 +156,7 @@ class Transformer(torch.nn.Module):
         # shift all the z's by the new avg
         z = z + shift
 
-        return z.view(n_samples*z.size(1), -1, self.d_model), kl_divergence(self.prior, posterior)
+        return z.view(n_samples*z.size(1), -1, self.d_model), kl_divergence(prior, posterior)
 
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
