@@ -138,6 +138,7 @@ class Transformer(torch.nn.Module):
 
         # repeat z on the sample dim, allocates more memory
         z = z.unsqueeze_(0).repeat(n_samples, 1, 1, 1)
+        print("z shape", z.shape)
 
         # shift all the z's by the new avg
         z = z + shift
