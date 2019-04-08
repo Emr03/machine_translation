@@ -156,7 +156,7 @@ class Transformer(torch.nn.Module):
         # shift all the z's by the new avg
         z = z + shift
         z = z.view(n_samples*z.size(1), -1, self.d_model)
-        kl_div = torch.mean(kl_divergence(prior, posterior))
+        kl_div = torch.sum(kl_divergence(prior, posterior))
 
         return z, kl_div
 
