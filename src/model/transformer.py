@@ -76,6 +76,9 @@ class Transformer(torch.nn.Module):
                                                      torch.nn.Linear(self.d_model, self.d_model),
                                                      torch.nn.Softplus())
 
+            # TODO: implement reparam trick (see if it's more efficient than pytorch's)
+            #self.standard_normal = torch.nn.MultivariateNormal()
+
         def init_weights(m):
 
             if type(m) == torch.nn.Linear:
@@ -108,23 +111,33 @@ class Transformer(torch.nn.Module):
 
         return self.linear_layers[tgt_lang](dec_output)
 
-    def sample_z(self, mean, n_samples):
+    def sample_z(self, z, n_samples):
         """
-
-        :param mean:
+        computes sentence embedding using the average of the sentences,
+        samples sentence embedding, then shifts the other z's to have that new average
+        :param z: determinisic output of encoder shape [n_samples, batch_size, len, d_model]
         :param n_samples:
         :return: latent variables of shape [n_samples, batch_size, len, d_model]
         """
-        sigma = self.compute_sigma(mean)
-        # make sigma a diagonal matrix of shape batch size, seq len, dim, dim
-        sigma = self.compute_sigma(mean)
+        # compute mean along dim of len which is 2, note that this will keep track of the gradient
+        sent_emb = torch.mean(z, dim=2)
+
+        # compute diagonal elements of sigma, returns vectors of dim d_model
+        sigma = self.compute_sigma(sent_emb)
+
+        # make sigma a diagonal matrix of shape batch size, dim, dim
         sigma = sigma.unsqueeze(-1).expand(*sigma.size(), self.d_model)
         sigma = sigma * torch.eye(self.d_model, device=sigma.device)
 
-        z = torch.distributions.MultivariateNormal(loc=mean, covariance_matrix=sigma)
+        # reparameterization trick
+        shift_dist = torch.distributions.MultivariateNormal(loc=torch.zeros_like(sent_emb), covariance_matrix=sigma)
 
         # samples z using reparameterization trick, the gradient will be propagated back
-        return z.rsample(sample_shape=torch.Size([n_samples]))
+        shift = z.rsample(sample_shape=torch.Size([n_samples]))
+
+        # TODO: handle more than one sample
+        # shift all the z's by the new avg
+        return z + shift
 
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
