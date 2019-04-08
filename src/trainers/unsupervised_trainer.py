@@ -209,7 +209,7 @@ class UnsupervisedTrainer(Trainer):
             idx = sent[:, i].item()
             input.append(self.data['dico'][self.id2lang[lang]][idx])
 
-        logger.info("sample sentence %s" % (','.join(input)))
+        logger.info("sample sentence in lang %s: %s" % (self.id2lang[lang], ','.join(input)))
 
     def test(self, n_tests):
         self.transformer.eval()
