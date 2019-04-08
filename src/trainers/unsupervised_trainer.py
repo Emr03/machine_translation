@@ -95,8 +95,8 @@ class UnsupervisedTrainer(Trainer):
         lang2 = 1
         logger.info("Training translation model for %s , %s " % (self.id2lang[lang1], self.id2lang[lang2]))
 
-        get_lm_iterators = [self.get_lm_iterator(lang=lang1, add_noise=True),
-                            self.get_lm_iterator(lang=lang2, add_noise=True)]
+        get_lm_iterators = [self.get_lm_iterator(lang_id=lang1, add_noise=True),
+                            self.get_lm_iterator(lang_id=lang2, add_noise=True)]
 
         lm_iterators = [get_iter() for get_iter in get_lm_iterators]
 
@@ -115,7 +115,7 @@ class UnsupervisedTrainer(Trainer):
 
             except StopIteration:
                 # restart the iterator
-                get_lm_iterators[0] = self.get_lm_iterator(lang=lang1, add_noise=True)
+                get_lm_iterators[0] = self.get_lm_iterator(lang_id=lang1, add_noise=True)
                 lm_iterators[0] = get_lm_iterators[0]()
                 lang_batch_dict = next(lm_iterators[0])
 
@@ -136,7 +136,7 @@ class UnsupervisedTrainer(Trainer):
 
             except StopIteration:
                 # restart the iterator
-                get_lm_iterators[1] = self.get_lm_iterator(lang=lang1, add_noise=True)
+                get_lm_iterators[1] = self.get_lm_iterator(lang_id=lang1, add_noise=True)
                 lm_iterators[1] = get_lm_iterators[1]()
                 lang_batch_dict = next(lm_iterators[1])
 

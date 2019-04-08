@@ -166,6 +166,7 @@ class Transformer(torch.nn.Module):
         else:
             latent = self.encode(input_seq, src_mask, src_lang)
 
+        # TODO: implement word-dropout
         dec_outputs = self.decode(prev_output=prev_output,
                                   latent_seq=latent,
                                   src_mask=src_mask,

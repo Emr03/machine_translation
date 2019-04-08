@@ -160,7 +160,7 @@ class Trainer(ABC):
     def train(n_iter):
         pass
 
-    def get_lm_iterator(self, lang, train=True, add_noise=True):
+    def get_lm_iterator(self, lang_id, train=True, add_noise=True):
         """
         returns batch with relevant masks
         moves everything to device
@@ -170,7 +170,7 @@ class Trainer(ABC):
         :return:
         """
 
-        lang = self.id2lang[lang]
+        lang = self.id2lang[lang_id]
 
         if train:
             assert (self.data['mono'][lang]['train'] is not None)
@@ -187,7 +187,7 @@ class Trainer(ABC):
 
                 tgt_batch.transpose_(0, 1)
                 if add_noise:
-                    src_batch, src_l = self.noise_model.add_noise(tgt_batch, tgt_l, lang)
+                    src_batch, src_l = self.noise_model.add_noise(tgt_batch, tgt_l, lang_id)
 
                 else:
                     src_batch = tgt_batch
