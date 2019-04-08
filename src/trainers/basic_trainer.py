@@ -61,7 +61,8 @@ class Trainer(ABC):
         self.opt = torch.optim.Adam(self.transformer.parameters(),
                                     lr=0.0,  betas=(0.9, 0.98), eps=1e-9)
 
-        self.kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
+        # Todo: decide if you want to size_average
+        self.kl_div_loss = torch.nn.KLDivLoss(size_average=True, reduce=True)
 
     def opt_step(self):
 
