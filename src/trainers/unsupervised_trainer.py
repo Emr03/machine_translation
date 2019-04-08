@@ -45,6 +45,11 @@ class UnsupervisedTrainer(Trainer):
                                           tgt_lang=lang2)
 
             loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+
+            if self.parallel:
+                print("kl_div ", kl_div)
+                kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
+                
             loss += self.kl_cost*kl_div
             self.logger.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
 
@@ -60,6 +65,18 @@ class UnsupervisedTrainer(Trainer):
             loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
         return loss
+
+    def distance_loss(self, latent_1, latent_2):
+        """
+
+        :param latent_1: avg encoder output for src sent
+        :param latent_2: avg decoder output for tgt sent
+        :return:
+        """
+        assert(latent_1.size(1) == latent_2.size(1))
+        assert(latent_1.size(0) == latent_2.size(0))
+
+        return torch.sum(torch.norm(latent_2 - latent_1, p=2, dim=-1))
 
     def create_backtranslation_batch(self, batch_dict, src_lang, tgt_lang, add_noise=True):
         """
