@@ -160,10 +160,11 @@ class Transformer(torch.nn.Module):
 
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
-        latent = self.encode(input_seq, src_mask, src_lang)
-
         if self.is_variational:
-            latent, kl_div = self.sample_z(z=latent, n_samples=1)
+            latent, kl_div = self.encode(input_seq, src_mask, src_lang)
+
+        else:
+            latent = self.encode(input_seq, src_mask, src_lang)
 
         dec_outputs = self.decode(prev_output=prev_output,
                                   latent_seq=latent,
