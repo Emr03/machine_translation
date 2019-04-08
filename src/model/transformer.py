@@ -134,7 +134,8 @@ class Transformer(torch.nn.Module):
 
         # samples z using reparameterization trick, the gradient will be propagated back
         shift = shift_dist.rsample(sample_shape=torch.Size([n_samples]))
-
+        print("shift shape", shift.shape)
+        
         # TODO: handle more than one sample
         # shift all the z's by the new avg
         return z + shift
