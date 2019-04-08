@@ -48,11 +48,11 @@ class UnsupervisedTrainer(Trainer):
 
                 loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
-                if self.parallel:
-                    print("kl_div ", kl_div)
-                    print("dec_out ", output_seq)
-                    print("loss ", loss)
-                    kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
+                #if self.parallel:
+                    #print("kl_div ", kl_div)
+                    #print("dec_out ", output_seq)
+                    #print("loss ", loss)
+                    #kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
 
                 loss += self.kl_cost*kl_div
                 self.logger.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
@@ -187,7 +187,7 @@ class UnsupervisedTrainer(Trainer):
 
             try:
 
-                if i % 50 == 0:
+                if i % 200 == 0:
                     # print("iter ", i, "loss: ", loss)
                     self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
                     trainer.save_model("en_fr_nonpara_variational.pth")
@@ -252,7 +252,7 @@ class UnsupervisedTrainer(Trainer):
 
 if __name__ == "__main__":
 
-    logger = create_logger("logs/variational_debug_2.log")
+    logger = create_logger("logs/variational_single_gpu.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     trainer = UnsupervisedTrainer(model)
 
     trainer.train(50000)
-    trainer.save_model("en_fr_nonpara_variational.pth")
+    trainer.save_model("en_fr_nonpara_variational_single_gpu.pth")
     # logger.info("testing trained model")
     # trainer.test(10)
     # logger.info("testing loaded model")
