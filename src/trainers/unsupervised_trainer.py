@@ -34,39 +34,44 @@ class UnsupervisedTrainer(Trainer):
         src_batch = batch_dict["src_batch"]
         prev_output = batch_dict["prev_output"]
 
-        if self.is_variational:
+        try :
 
-            # returns decoded samples and kl divergence between prior and posterior
-            output_seq, kl_div = self.transformer(input_seq=src_batch,
-                                          prev_output=prev_output,
-                                          src_mask=src_mask,
-                                          tgt_mask=tgt_mask,
-                                          src_lang=lang1,
-                                          tgt_lang=lang2)
+            if self.is_variational:
 
-            loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+                # returns decoded samples and kl divergence between prior and posterior
+                output_seq, kl_div = self.transformer(input_seq=src_batch,
+                                              prev_output=prev_output,
+                                              src_mask=src_mask,
+                                              tgt_mask=tgt_mask,
+                                              src_lang=lang1,
+                                              tgt_lang=lang2)
 
-            if self.parallel:
-                print("kl_div ", kl_div)
-                print("dec_out ", output_seq)
-                print("loss ", loss)
-                kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
-                
-            loss += self.kl_cost*kl_div
-            self.logger.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
+                loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
-        else:
+                if self.parallel:
+                    print("kl_div ", kl_div)
+                    print("dec_out ", output_seq)
+                    print("loss ", loss)
+                    kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
 
-            output_seq = self.transformer(input_seq=src_batch,
-                                          prev_output=prev_output,
-                                          src_mask=src_mask,
-                                          tgt_mask=tgt_mask,
-                                          src_lang=lang1,
-                                          tgt_lang=lang2)
+                loss += self.kl_cost*kl_div
+                self.logger.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
 
-            loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+            else:
 
-        return loss
+                output_seq = self.transformer(input_seq=src_batch,
+                                              prev_output=prev_output,
+                                              src_mask=src_mask,
+                                              tgt_mask=tgt_mask,
+                                              src_lang=lang1,
+                                              tgt_lang=lang2)
+
+                loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+
+            return loss
+
+        except Exception as e:
+            self.logger.exception("message")
 
     def distance_loss(self, latent_1, latent_2):
         """
