@@ -245,7 +245,7 @@ class UnsupervisedTrainer(Trainer):
 
 if __name__ == "__main__":
 
-    logger = create_logger("logs/variational_debug.log")
+    logger = create_logger("logs/variational_debug_2.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
