@@ -146,7 +146,7 @@ class Transformer(torch.nn.Module):
         # shift all the z's by the new avg
         z = z + shift
 
-        return z.view(n_samples*self.batch_size, -1, self.d_model)
+        return z.view(n_samples*z.size(1), -1, self.d_model)
 
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
