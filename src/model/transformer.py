@@ -133,7 +133,7 @@ class Transformer(torch.nn.Module):
         shift_dist = torch.distributions.MultivariateNormal(loc=torch.zeros_like(sent_emb), covariance_matrix=sigma)
 
         # samples z using reparameterization trick, the gradient will be propagated back
-        shift = z.rsample(sample_shape=torch.Size([n_samples]))
+        shift = shift_dist.rsample(sample_shape=torch.Size([n_samples]))
 
         # TODO: handle more than one sample
         # shift all the z's by the new avg
