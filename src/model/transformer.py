@@ -77,8 +77,8 @@ class Transformer(torch.nn.Module):
                                                      torch.nn.Linear(self.d_model, self.d_model),
                                                      torch.nn.Softplus())
 
-            # TODO: implement reparam trick (see if it's more efficient than pytorch's)
-            #self.standard_normal = torch.nn.MultivariateNormal()
+            self.prior = torch.distributions.MultivariateNormal(loc=torch.zeros(self.d_model),
+                                                                covariance_matrix=torch.eye(self.d_model))
 
         def init_weights(m):
 
