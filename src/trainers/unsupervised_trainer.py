@@ -46,7 +46,7 @@ class UnsupervisedTrainer(Trainer):
 
             loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
             loss += self.kl_cost*kl_div
-            self.logger.info("kl_div %40.1f, kl_cost %40.1f, kl_loss" % (kl_div.item(), self.kl_cost))
+            self.logger.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
 
         else:
 
