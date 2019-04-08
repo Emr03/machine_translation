@@ -120,7 +120,7 @@ class Transformer(torch.nn.Module):
         :return: latent variables of shape [n_samples, batch_size, len, d_model]
         """
         # compute mean along dim of len which is 2, note that this will keep track of the gradient
-        sent_emb = torch.mean(z, dim=2)
+        sent_emb = torch.mean(z, dim=1)
 
         # compute diagonal elements of sigma, returns vectors of dim d_model
         sigma = self.compute_sigma(sent_emb)
