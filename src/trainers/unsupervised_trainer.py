@@ -46,6 +46,7 @@ class UnsupervisedTrainer(Trainer):
 
             loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
             loss += self.kl_cost*kl_div
+            self.logger.info("kl_div %40.1f, kl_cost %40.1f, kl_loss" % (kl_div.item(), self.kl_cost))
 
         else:
 
@@ -235,10 +236,10 @@ if __name__ == "__main__":
 
     trainer = UnsupervisedTrainer(model)
 
-    trainer.train(10000)
-    trainer.save_model("en_fr_nonpara.pth")
-    logger.info("testing trained model")
-    trainer.test(10)
-    logger.info("testing loaded model")
-    trainer.load_model("en_fr_nonpara.pth")
-    trainer.test(10)
+    trainer.train(20000)
+    trainer.save_model("en_fr_nonpara_variational.pth")
+    # logger.info("testing trained model")
+    # trainer.test(10)
+    # logger.info("testing loaded model")
+    # trainer.load_model("en_fr_nonpara.pth")
+    # trainer.test(10)
