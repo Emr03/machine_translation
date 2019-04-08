@@ -73,7 +73,9 @@ class MyBeamSearch(torch.nn.Module):
             # (1) Run the encoder on the src.
             enc_out = self.transformer.encode(batch,
                                           src_mask=src_mask,
-                                          src_lang=src_lang)
+                                          src_lang=src_lang,
+                                          n_samples=1,
+                                          return_kl=False)
 
             #self.logger.info("enc_out batch size %i " % (enc_out.size(0)))
 

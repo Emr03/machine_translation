@@ -13,6 +13,19 @@ class UnsupervisedTrainer(Trainer):
 
         super().__init__(transformer, parallel)
 
+        self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=self.logger,
+                                        n_best=1, encoding_lengths=512, max_length=175)
+
+        if self.parallel:
+            # self.device is the main device where stuff is aggregated
+            self.beam_search = torch.nn.DataParallel(self.beam_search)
+
+        self.beam_search.to(self.device)
+
+        if self.is_variational:
+            self.kl_cost = 0
+            self.kl_cost_rate = 0.0001
+
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
         tgt_mask = batch_dict["tgt_mask"]
@@ -21,23 +34,31 @@ class UnsupervisedTrainer(Trainer):
         src_batch = batch_dict["src_batch"]
         prev_output = batch_dict["prev_output"]
 
-        output_seq = self.transformer(input_seq=src_batch,
-                                      prev_output=prev_output,
-                                      src_mask=src_mask,
-                                      tgt_mask=tgt_mask,
-                                      src_lang=lang1,
-                                      tgt_lang=lang2)
+        if self.is_variational:
 
-        self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=self.logger,
-                                   n_best=1, encoding_lengths=512, max_length=175)
+            # returns decoded samples and kl divergence between prior and posterior
+            output_seq, kl_div = self.transformer(input_seq=src_batch,
+                                          prev_output=prev_output,
+                                          src_mask=src_mask,
+                                          tgt_mask=tgt_mask,
+                                          src_lang=lang1,
+                                          tgt_lang=lang2)
 
-        if self.parallel:
-            # self.device is the main device where stuff is aggregated
-            self.beam_search = torch.nn.DataParallel(self.beam_search)
+            loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+            loss += self.kl_cost*kl_div
 
-        self.beam_search.to(self.device)
+        else:
 
-        return self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+            output_seq = self.transformer(input_seq=src_batch,
+                                          prev_output=prev_output,
+                                          src_mask=src_mask,
+                                          tgt_mask=tgt_mask,
+                                          src_lang=lang1,
+                                          tgt_lang=lang2)
+
+            loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
+
+        return loss
 
     def create_backtranslation_batch(self, batch_dict, src_lang, tgt_lang, add_noise=True):
         """
@@ -85,6 +106,9 @@ class UnsupervisedTrainer(Trainer):
         for i in range(n_iter):
 
             self.opt.zero_grad()
+
+            if self.is_variational:
+                self.kl_cost = min(1, i*self.kl_cost_rate)
 
             try:
                 lang_batch_dict = next(lm_iterators[0])

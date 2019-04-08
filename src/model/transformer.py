@@ -3,6 +3,7 @@ from src.model.encoder import *
 from src.model.noise_model import *
 from src.data.load_embeddings import *
 from src.utils.config import params
+from torch.distributions.kl import kl_divergence
 
 class Transformer(torch.nn.Module):
 
@@ -97,9 +98,18 @@ class Transformer(torch.nn.Module):
             for l in self.linear_layers:
                 l.apply(init_weights)
 
-    def encode(self, input_seq, src_mask, src_lang):
+    def encode(self, input_seq, src_mask, src_lang, n_samples=1, return_kl=True):
 
-        return self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
+        if not self.is_variational:
+            return self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
+
+        else:
+            z = self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
+            new_z, kl_div = self.sample_z(z, n_samples)
+            if return_kl:
+                return new_z, kl_div
+            else:
+                return new_z
 
     def decode(self, prev_output, latent_seq, src_mask, tgt_mask, tgt_lang):
 
@@ -131,6 +141,7 @@ class Transformer(torch.nn.Module):
 
         # reparameterization trick
         shift_dist = torch.distributions.MultivariateNormal(loc=torch.zeros_like(sent_emb), covariance_matrix=sigma)
+        posterior = torch.distributions.MultivariateNormal(loc=sent_emb, covariance_matrix=sigma)
 
         # samples z using reparameterization trick, the gradient will be propagated back
         shift = shift_dist.rsample(sample_shape=torch.Size([n_samples]))
@@ -146,14 +157,14 @@ class Transformer(torch.nn.Module):
         # shift all the z's by the new avg
         z = z + shift
 
-        return z.view(n_samples*z.size(1), -1, self.d_model)
+        return z.view(n_samples*z.size(1), -1, self.d_model), kl_divergence(self.prior, posterior)
 
     def forward(self, input_seq, prev_output, src_mask, tgt_mask, src_lang, tgt_lang):
 
         latent = self.encode(input_seq, src_mask, src_lang)
 
         if self.is_variational:
-            latent = self.sample_z(z=latent, n_samples=1)
+            latent, kl_div = self.sample_z(z=latent, n_samples=1)
 
         dec_outputs = self.decode(prev_output=prev_output,
                                   latent_seq=latent,
@@ -161,7 +172,11 @@ class Transformer(torch.nn.Module):
                                   tgt_mask=tgt_mask,
                                   tgt_lang=tgt_lang)
 
-        return dec_outputs
+        if self.is_variational:
+            return dec_outputs, kl_div
+
+        else:
+            return dec_outputs
 
     def load_data(self, data_params):
 
