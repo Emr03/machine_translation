@@ -8,13 +8,13 @@ from .basic_trainer import Trainer
 from src.model.beam_search_wrapper import MyBeamSearch
 import copy
 
-logging.basicConfig(filename="logs/unsupervised.log", level=logging.DEBUG)
-
 class UnsupervisedTrainer(Trainer):
 
-    def __init__(self, transformer, parallel=True):
+    def __init__(self, transformer, exp_name, parallel=True):
 
         super().__init__(transformer, parallel)
+
+        self.exp_name = exp_name
 
         self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
                                         n_best=1, encoding_lengths=512, max_length=175)
@@ -191,7 +191,7 @@ class UnsupervisedTrainer(Trainer):
             if i % 200 == 0:
                 # print("iter ", i, "loss: ", loss)
                 logging.info("iter %i: loss %40.1f" % (i, loss.item()))
-                trainer.checkpoint("en_fr_nonpara.pth")
+                trainer.checkpoint(self.exp_name+".pth")
 
             try:
                 para_batch_dict = next(para_iterator)
@@ -253,15 +253,19 @@ if __name__ == "__main__":
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
+    exp_name = data_params.exp_name
+    is_variational = data_params.variational
+    logging.basicConfig(filename="logs/"+exp_name+".log", level=logging.DEBUG)
+
     model = Transformer(data_params=data_params, logger=logging,
                         init_emb=True,
                         embd_file="corpora/mono/all.en-fr.60000.vec",
                         is_variational=False)
 
-    trainer = UnsupervisedTrainer(model)
+    trainer = UnsupervisedTrainer(model, exp_name)
 
     trainer.train(50000)
-    trainer.save_model("en_fr_nonpara_double_gpu.pth")
+    trainer.checkpoint(exp_name+".pth")
     # logger.info("testing trained model")
     # trainer.test(10)
     # logger.info("testing loaded model")

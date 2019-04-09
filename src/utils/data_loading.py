@@ -56,6 +56,10 @@ def get_parser():
     # training parameters
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Batch size")
+
+    parser.add_argument("--variational", type=bool, default=True)
+    parser.add_argument("--exp_name", type=str, default="variational")
+
     return parser
 
 def main(params):
