@@ -58,7 +58,6 @@ def get_parser():
                         help="Batch size")
 
     parser.add_argument("--variational", type=bool, default=True)
-    parser.add_argument("--exp_name", type=str, default="variational")
 
     return parser
 
