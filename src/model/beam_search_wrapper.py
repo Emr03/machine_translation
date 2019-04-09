@@ -51,9 +51,6 @@ class MyBeamSearch(torch.nn.Module):
         else:
             device = torch.device('cpu')
 
-        #assert(batch.size(0) == self.batch_size)
-        print("in beam search ", batch.size(0))
-
         # if parallel, each BeamSearch object lives on the device of the input batch
         beamSearch = BeamSearch(self.beam_size, batch_size,
                                      pad=self.pad_index,

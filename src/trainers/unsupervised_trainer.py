@@ -8,7 +8,7 @@ from .basic_trainer import Trainer
 from src.model.beam_search_wrapper import MyBeamSearch
 import copy
 
-logging.basicConfig(filename="test_unsupervised_variational.log", level=logging.DEBUG)
+logging.basicConfig(filename="logs/test_unsupervised_variational.log", level=logging.DEBUG)
 
 class UnsupervisedTrainer(Trainer):
 
@@ -188,15 +188,13 @@ class UnsupervisedTrainer(Trainer):
                 logging.debug("Exception in training loop")
                 logging.exception("message")
 
+            if i % 200 == 0:
+                # print("iter ", i, "loss: ", loss)
+                logging.info("iter %i: loss %40.1f" % (i, loss.item()))
+                trainer.checkpoint("en_fr_nonpara_variational.pth")
+
             try:
-
-                if i % 200 == 0:
-                    # print("iter ", i, "loss: ", loss)
-                    logging.info("iter %i: loss %40.1f" % (i, loss.item()))
-                    trainer.save_model("en_fr_nonpara_variational.pth")
-
-                    # TODO: add validation (with parallel and non-parallel)
-                    para_batch_dict = next(para_iterator)
+                para_batch_dict = next(para_iterator)
 
             except StopIteration:
                 # restart the iterator
@@ -217,9 +215,6 @@ class UnsupervisedTrainer(Trainer):
         """
 
         batch_size = src_batch.shape[0]
-        print("batch size in trainer ", batch_size)
-        #assert(src_mask.shape[0] == batch_size)
-
         output, len = self.beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
 
         # For verification, what does an output sample look like?
