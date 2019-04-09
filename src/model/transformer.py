@@ -104,13 +104,14 @@ class Transformer(torch.nn.Module):
 
     def encode(self, input_seq, src_mask, src_lang, n_samples=1, return_kl=True):
 
-        if not self.is_variational:
-            return self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
+        z = self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
+
+        if not self.is_variational or n_samples <= 0:
+            return z
 
         else:
-            z = self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
             new_z, kl_div = self.sample_z(z, n_samples)
-            print("kl_div in encode", kl_div)
+            #print("kl_div in encode", kl_div)
             if return_kl:
                 return new_z, kl_div
             else:
@@ -163,7 +164,7 @@ class Transformer(torch.nn.Module):
         z = z + shift
         z = z.view(n_samples*z.size(1), -1, self.d_model)
         kl_div = torch.mean(kl_divergence(prior, posterior))
-        print("kl_div in sample", kl_div)
+        #print("kl_div in sample", kl_div)
 
         return z, kl_div
 
@@ -171,7 +172,7 @@ class Transformer(torch.nn.Module):
 
         if self.is_variational:
             latent, kl_div = self.encode(input_seq, src_mask, src_lang)
-            print("kl div in forward", kl_div)
+            #print("kl div in forward", kl_div)
 
         else:
             latent = self.encode(input_seq, src_mask, src_lang)

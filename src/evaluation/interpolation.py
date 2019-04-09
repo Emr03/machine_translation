@@ -23,11 +23,16 @@ class Interpolation:
         :return:
         """
 
+        # TODO: return avg or compute avg,
         z1 = self.transformer.encode(sent1, src_mask1, lang1)
         z2 = self.transformer.encode(sent2, src_mask2, lang2)
 
         dist = z2 - z1
-        eps = 0.01
+        eps = 0.1
+
+        while eps < 1:
+
+            z = z1
 
 
 

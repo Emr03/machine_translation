@@ -8,7 +8,7 @@ from .basic_trainer import Trainer
 from src.model.beam_search_wrapper import MyBeamSearch
 import copy
 
-logging.basicConfig(filename="logs/test_unsupervised_variational.log", level=logging.DEBUG)
+logging.basicConfig(filename="logs/unsupervised_variational.log", level=logging.DEBUG)
 
 class UnsupervisedTrainer(Trainer):
 
@@ -254,12 +254,14 @@ if __name__ == "__main__":
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     model = Transformer(data_params=data_params, logger=logging,
-                        init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec", is_variational=True)
+                        init_emb=True,
+                        embd_file="corpora/mono/all.en-fr.60000.vec",
+                        is_variational=True)
 
     trainer = UnsupervisedTrainer(model)
 
     trainer.train(50000)
-    trainer.save_model("en_fr_nonpara_variational_single_gpu.pth")
+    trainer.save_model("en_fr_nonpara_variational_double_gpu.pth")
     # logger.info("testing trained model")
     # trainer.test(10)
     # logger.info("testing loaded model")
