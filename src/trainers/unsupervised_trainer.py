@@ -2,10 +2,13 @@ from src.data.dataset import *
 from src.data.loader import *
 from src.model.transformer import Transformer
 from src.utils.data_loading import get_parser
-from src.utils.logger import create_logger
+#from src.utils.logger import create_logger
+import logging
 from .basic_trainer import Trainer
 from src.model.beam_search_wrapper import MyBeamSearch
 import copy
+
+logging.basicConfig(filename="test_unsupervised_variational.log", level=logging.DEBUG)
 
 class UnsupervisedTrainer(Trainer):
 
@@ -13,7 +16,7 @@ class UnsupervisedTrainer(Trainer):
 
         super().__init__(transformer, parallel)
 
-        self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=self.logger,
+        self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
                                         n_best=1, encoding_lengths=512, max_length=175)
 
         if self.parallel:
@@ -55,7 +58,7 @@ class UnsupervisedTrainer(Trainer):
                     #kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
 
                 loss += self.kl_cost*kl_div
-                self.logger.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
+                logging.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
 
             else:
 
@@ -71,7 +74,7 @@ class UnsupervisedTrainer(Trainer):
             return loss
 
         except Exception as e:
-            self.logger.exception("message")
+            logging.exception("message")
 
     def distance_loss(self, latent_1, latent_2):
         """
@@ -146,7 +149,7 @@ class UnsupervisedTrainer(Trainer):
 
             # get lm loss for lang 1
             loss = self.reconstruction_loss(batch_dict=lang_batch_dict, lang1=lang1, lang2=lang1)
-            self.logger.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
+            logging.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
 
             # the same for back-translation
             back_batch_dict = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
@@ -154,7 +157,7 @@ class UnsupervisedTrainer(Trainer):
                                                               tgt_lang=lang2)
 
             loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang2, lang2=lang1)
-            self.logger.info("iter %i: back translation loss %40.1f" % (i, loss.item()))
+            logging.info("iter %i: back translation loss %40.1f" % (i, loss.item()))
 
             try:
                 lang_batch_dict = next(lm_iterators[1])
@@ -167,7 +170,7 @@ class UnsupervisedTrainer(Trainer):
 
             # get lm loss for lang 2
             loss += self.reconstruction_loss(batch_dict=lang_batch_dict, lang1=lang2, lang2=lang2)
-            self.logger.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
+            logging.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
 
             # the same for back-translation
             back_batch_dict = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
@@ -175,21 +178,21 @@ class UnsupervisedTrainer(Trainer):
                                                                 tgt_lang=lang1)
 
             loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang1, lang2=lang2)
-            self.logger.info("iter %i: backtranslation loss %40.1f" % (i, loss.item()))
+            logging.info("iter %i: backtranslation loss %40.1f" % (i, loss.item()))
 
             try:
                 loss.backward()
                 self.opt_step()
 
             except Exception as e:
-                self.logger.debug("Exception in training loop")
-                self.logger.exception("message")
+                logging.debug("Exception in training loop")
+                logging.exception("message")
 
             try:
 
                 if i % 200 == 0:
                     # print("iter ", i, "loss: ", loss)
-                    self.logger.info("iter %i: loss %40.1f" % (i, loss.item()))
+                    logging.info("iter %i: loss %40.1f" % (i, loss.item()))
                     trainer.save_model("en_fr_nonpara_variational.pth")
 
                     # TODO: add validation (with parallel and non-parallel)
@@ -202,7 +205,7 @@ class UnsupervisedTrainer(Trainer):
                 para_batch_dict = next(para_iterator)
 
             val_loss = self.reconstruction_loss(para_batch_dict, lang1=lang1, lang2=lang2)
-            self.logger.info("iter %i: val_loss %40.1f" % (i, val_loss.item()))
+            logging.info("iter %i: val_loss %40.1f" % (i, val_loss.item()))
 
     def generate_parallel(self, src_batch, src_mask, src_lang, tgt_lang):
         """
@@ -248,15 +251,14 @@ class UnsupervisedTrainer(Trainer):
             # self.greedy_decoding(batch_dict, lang1, lang2)
             self.output_samples(batch_dict, lang1, lang2)
             loss = self.translation_loss(batch_dict, lang1, lang2)
-            self.logger.info("translation loss", loss)
+            logging.info("translation loss", loss)
 
 if __name__ == "__main__":
 
-    logger = create_logger("logs/variational_single_gpu.log")
     parser = get_parser()
     data_params = parser.parse_args()
     check_all_data_params(data_params)
-    model = Transformer(data_params=data_params, logger=logger,
+    model = Transformer(data_params=data_params, logger=logging,
                         init_emb=True, embd_file="corpora/mono/all.en-fr.60000.vec", is_variational=True)
 
     trainer = UnsupervisedTrainer(model)

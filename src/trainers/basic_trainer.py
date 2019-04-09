@@ -61,19 +61,70 @@ class Trainer(ABC):
         self.opt = torch.optim.Adam(self.transformer.parameters(),
                                     lr=0.0,  betas=(0.9, 0.98), eps=1e-9)
 
+        # save training details to resume
+        self.state = {'iter': self.step,
+                      'state_dict': self.transformer.state_dict(),
+                      'optimizer': self.opt.state_dict()}
+
         # Todo: decide if you want to size_average, it reduces the loss a lot
         self.kl_div_loss = torch.nn.KLDivLoss(size_average=False, reduce=True)
 
+    def save_model(self, path):
+
+        try:
+            torch.save(self.transformer.state_dict(), path)
+
+        except Exception as e:
+            self.logger.exception("message")
+
+    def load_model(self, path):
+
+        try:
+            self.transformer.load_state_dict(torch.load(path, map_location=self.device))
+
+        except Exception as e:
+            self.logger.exception("message")
+
+    def checkpoint(self, filename):
+
+        try:
+            self.state = {'iter': self.step,
+                          'state_dict': self.transformer.state_dict(),
+                          'optimizer': self.opt.state_dict()}
+
+            torch.save(self.state, filename)
+
+        except Exception as e:
+            self.logger.exception("message")
+
+    def load_checkpoint(self, filename):
+
+        try:
+            self.state = torch.load(filename, map_location=self.device)
+            model_state_dict = self.state["state_dict"]
+            opt_state_dict = self.state["optimizer"]
+
+            self.transformer.load_state_dict(state_dict=model_state_dict)
+            self.opt.load_state_dict(state_dict=opt_state_dict)
+
+        except Exception as e:
+            self.logger.exception("message")
+
     def opt_step(self):
 
-        self.step += 1
-        lr = self.factor * (self.d_model ** (-0.5) * min(self.step ** (-0.5),
-                                                         self.step * self.warmup ** (-1.5)))
+        try:
+            self.step += 1
+            lr = self.factor * (self.d_model ** (-0.5) * min(self.step ** (-0.5),
+                                                             self.step * self.warmup ** (-1.5)))
 
-        for p in self.opt.param_groups:
-            p['lr'] = lr
+            for p in self.opt.param_groups:
+                p['lr'] = lr
 
-        self.opt.step()
+            self.opt.step()
+
+        except Exception as e:
+            self.logger.exception("message")
+
 
     def compute_kl_div_loss(self, x, target, lang):
         """
@@ -84,42 +135,47 @@ class Trainer(ABC):
         :return:
         """
 
-        # apply softmax on last dim, corresponding to words
-        x = F.log_softmax(x, dim=-1)
+        try:
+            # apply softmax on last dim, corresponding to words
+            x = F.log_softmax(x, dim=-1)
 
-        # reshape to index word by word on dim 0
-        x = x.reshape(-1, x.size(-1))
-        target = target.reshape(-1, 1)
+            # reshape to index word by word on dim 0
+            x = x.reshape(-1, x.size(-1))
+            target = target.reshape(-1, 1)
 
-        # get number of tokens, to scale loss
-        normalize = target.size(0)
+            # get number of tokens, to scale loss
+            normalize = target.size(0)
 
-        # same device and dtype as x, requires_grad = false
-        smooth_target = torch.zeros_like(x)
-        smooth_target.fill_(self.smoothing / self.vocab_size[lang])
+            # same device and dtype as x, requires_grad = false
+            smooth_target = torch.zeros_like(x)
+            smooth_target.fill_(self.smoothing / self.vocab_size[lang])
 
-        if self.parallel:
-            smooth_target.scatter_(dim=1, index=target.data, value=self.confidence)
+            if self.parallel:
+                smooth_target.scatter_(dim=1, index=target.data, value=self.confidence)
 
-        # zero the pad_index for each vector of probabilities
-        smooth_target[:, self.pad_index] = 0
+            # zero the pad_index for each vector of probabilities
+            smooth_target[:, self.pad_index] = 0
 
-        # find where the target word is a pad symbol, returns indices along dim 0
-        mask = torch.nonzero(target.squeeze().data == self.pad_index)
-        
-        if mask.size(0) != 0:
-            # print("mask ", mask.size())
-            # fill the entries of pad symbols with 0 prob
-            smooth_target.index_fill_(0, mask.squeeze(), 0.0)
-        
-        if torch.isnan(self.kl_div_loss(x, smooth_target)).item():
-            self.logger.debug("loss is nan")
-            self.logger.debug("x", x)
-            self.logger.debug("smooth target ", smooth_target)
-        
-        return self.kl_div_loss(x, smooth_target) / normalize
+            # find where the target word is a pad symbol, returns indices along dim 0
+            mask = torch.nonzero(target.squeeze().data == self.pad_index)
+
+            if mask.size(0) != 0:
+                # print("mask ", mask.size())
+                # fill the entries of pad symbols with 0 prob
+                smooth_target.index_fill_(0, mask.squeeze(), 0.0)
+
+            if torch.isnan(self.kl_div_loss(x, smooth_target)).item():
+                self.logger.debug("loss is nan")
+                self.logger.debug("x", x)
+                self.logger.debug("smooth target ", smooth_target)
+
+            return self.kl_div_loss(x, smooth_target) / normalize
+
+        except Exception as e:
+            self.logger.exception("message")
 
     def get_src_mask(self, src_batch):
+
         mask = torch.ones_like(src_batch)
         mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
         #print("mask", mask)
@@ -391,11 +447,6 @@ class Trainer(ABC):
 
         self.logger.info("input ", input_sent)
 
-    def save_model(self, path):
-        torch.save(self.transformer.state_dict(), path)
-
-    def load_model(self, path):
-        self.transformer.load_state_dict(torch.load(path, map_location=self.device))
 
 if __name__ == "__main__":
 
