@@ -10,12 +10,13 @@ import copy
 
 class UnsupervisedTrainer(Trainer):
 
-    def __init__(self, transformer, exp_name, parallel=True):
+    def __init__(self, transformer, exp_name, use_distance_loss=True, parallel=True):
 
         super().__init__(transformer, parallel)
 
         self.exp_name = exp_name
         self.is_variational = self.transformer.is_variational
+        self.use_distance_loss = use_distance_loss
 
         self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
                                         n_best=1, encoding_lengths=512, max_length=175)
@@ -32,6 +33,8 @@ class UnsupervisedTrainer(Trainer):
             self.kl_cost = 0
             self.kl_cost_rate = 0.0001
 
+        self.distance_cost = 0.1 if self.use_distance_loss else 0
+
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
         tgt_mask = batch_dict["tgt_mask"]
@@ -45,7 +48,7 @@ class UnsupervisedTrainer(Trainer):
             if self.is_variational:
 
                 # returns decoded samples and kl divergence between prior and posterior
-                output_seq, kl_div = self.transformer(input_seq=src_batch,
+                output_seq, kl_div, latent = self.transformer(input_seq=src_batch,
                                               prev_output=prev_output,
                                               src_mask=src_mask,
                                               tgt_mask=tgt_mask,
@@ -97,11 +100,26 @@ class UnsupervisedTrainer(Trainer):
 
         # note that bos is missing
         x = batch_dict["tgt_batch"]
+        x[:, 0] = self.bos_index[src_lang]
+
         src_mask = self.get_src_mask(x)
         y, len = self.generate_parallel(src_batch=x,
                                         src_mask=src_mask,
                                         src_lang=src_lang,
                                         tgt_lang=tgt_lang)
+
+        # TODO: we have to penalize the distance between the source's emb and the output's emb
+        src_z = self.transformer.encode(input_seq=x,
+                                        src_mask=src_mask,
+                                        src_lang=src_lang,
+                                        n_samples=0)
+
+        tgt_z = self.transformer.encode(input_seq=y,
+                                        src_mask=self.get_src_mask(y),
+                                        src_lang=tgt_lang,
+                                        n_samples=0)
+
+        distance = self.distance_loss(src_z, tgt_z)
 
         if add_noise:
             y, len = self.noise_model.add_noise(y.cpu(), len.cpu(), tgt_lang)
@@ -115,7 +133,7 @@ class UnsupervisedTrainer(Trainer):
         new_batch_dict["src_mask"] = src_mask
         new_batch_dict["src_l"] = len
 
-        return new_batch_dict
+        return new_batch_dict, distance
 
     def train(self, n_iter):
 
@@ -152,11 +170,11 @@ class UnsupervisedTrainer(Trainer):
             logging.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
 
             # the same for back-translation
-            back_batch_dict = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
+            back_batch_dict, distance_loss = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
                                                               src_lang=lang1,
                                                               tgt_lang=lang2)
 
-            loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang2, lang2=lang1)
+            loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang2, lang2=lang1) + distance_loss
             logging.info("iter %i: back translation loss %40.1f" % (i, loss.item()))
 
             try:
@@ -173,11 +191,11 @@ class UnsupervisedTrainer(Trainer):
             logging.info("iter %i: reconstruction loss %40.1f" % (i, loss.item()))
 
             # the same for back-translation
-            back_batch_dict = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
+            back_batch_dict, distance_loss = self.create_backtranslation_batch(batch_dict=lang_batch_dict,
                                                                 src_lang=lang2,
                                                                 tgt_lang=lang1)
 
-            loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang1, lang2=lang2)
+            loss += self.reconstruction_loss(batch_dict=back_batch_dict, lang1=lang1, lang2=lang2) + distance_loss
             logging.info("iter %i: backtranslation loss %40.1f" % (i, loss.item()))
 
             try:
@@ -213,8 +231,6 @@ class UnsupervisedTrainer(Trainer):
         :param tgt_lang:
         :return:
         """
-
-        batch_size = src_batch.shape[0]
         output, len = self.beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
 
         # For verification, what does an output sample look like?
@@ -266,8 +282,4 @@ if __name__ == "__main__":
 
     trainer.train(50000)
     trainer.checkpoint(exp_name+".pth")
-    # logger.info("testing trained model")
-    # trainer.test(10)
-    # logger.info("testing loaded model")
-    # trainer.load_model("en_fr_nonpara.pth")
-    # trainer.test(10)
+

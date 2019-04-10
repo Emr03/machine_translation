@@ -111,7 +111,7 @@ class Transformer(torch.nn.Module):
 
         else:
             new_z, kl_div = self.sample_z(z, n_samples)
-            #print("kl_div in encode", kl_div)
+
             if return_kl:
                 return new_z, kl_div
             else:
@@ -145,9 +145,12 @@ class Transformer(torch.nn.Module):
         sigma = sigma.unsqueeze(-1).expand(*sigma.size(), self.d_model)
         sigma = sigma * torch.eye(self.d_model, device=sigma.device)
 
-        # reparameterization trick
-        shift_dist = torch.distributions.MultivariateNormal(loc=torch.zeros_like(sent_emb), covariance_matrix=sigma)
-        posterior = torch.distributions.MultivariateNormal(loc=sent_emb, covariance_matrix=sigma)
+        shift_dist = torch.distributions.MultivariateNormal(loc=torch.zeros_like(sent_emb),
+                                                            covariance_matrix=sigma)
+
+        posterior = torch.distributions.MultivariateNormal(loc=sent_emb,
+                                                           covariance_matrix=sigma)
+
         prior = torch.distributions.MultivariateNormal(loc=torch.zeros(self.d_model, device=sent_emb.device),
                                                        covariance_matrix=torch.eye(self.d_model, device=sent_emb.device))
 
@@ -173,8 +176,6 @@ class Transformer(torch.nn.Module):
             latent, kl_div = self.encode(input_seq, src_mask, src_lang)
             prev_output = self.word_dropout(prev_output=prev_output, lang_id=tgt_lang)
 
-            #print("kl div in forward", kl_div)
-
         else:
             latent = self.encode(input_seq, src_mask, src_lang)
 
@@ -185,7 +186,8 @@ class Transformer(torch.nn.Module):
                                   tgt_lang=tgt_lang)
 
         if self.is_variational:
-            return dec_outputs, kl_div
+            # return all the things!
+            return dec_outputs, kl_div, latent
 
         else:
             return dec_outputs
