@@ -32,7 +32,6 @@ class UnsupervisedTrainer(Trainer):
             self.logger.info("is variational")
             self.kl_cost = 0
             self.kl_cost_rate = 0.0001
-            self.distance_cost = self.kl_cost_rate if self.use_distance_loss else 0
 
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
@@ -108,16 +107,18 @@ class UnsupervisedTrainer(Trainer):
                                         tgt_lang=tgt_lang)
 
         # we have to penalize the distance between the source's emb and the output's emb
-        src_z = self.transformer.module.get_emb(input_seq=x,
-                                        src_mask=src_mask,
-                                        src_lang=src_lang)
+        distance_penalty = 0
+        if self.use_distance_loss:
+            src_z = self.transformer.module.get_emb(input_seq=x,
+                                            src_mask=src_mask,
+                                            src_lang=src_lang)
 
-        tgt_z = self.transformer.module.get_emb(input_seq=y,
-                                        src_mask=self.get_src_mask(y),
-                                        src_lang=tgt_lang)
+            tgt_z = self.transformer.module.get_emb(input_seq=y,
+                                            src_mask=self.get_src_mask(y),
+                                            src_lang=tgt_lang)
 
-        distance_penalty = self.distance_loss(src_z, tgt_z) * self.distance_cost
-        self.logger.info("distance penalty %40.2f" % (distance_penalty.item()))
+            distance_penalty = self.distance_loss(src_z, tgt_z) * self.distance_cost
+            self.logger.info("distance penalty %40.2f" % (distance_penalty.item()))
 
         if add_noise:
             y, len = self.noise_model.add_noise(y.cpu(), len.cpu(), tgt_lang)
@@ -153,6 +154,9 @@ class UnsupervisedTrainer(Trainer):
 
             if self.is_variational:
                 self.kl_cost = min(1, i*self.kl_cost_rate)
+
+            if self.use_distance_loss:
+                self.distance_cost = self.kl_cost
 
             try:
                 lang_batch_dict = next(lm_iterators[0])
