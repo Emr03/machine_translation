@@ -207,8 +207,9 @@ class Transformer(torch.nn.Module):
         keep = keep.type(torch.LongTensor)
 
         prev_output_new = torch.ones_like(prev_output)*self.blank_index
+        print(keep.device, prev_output_new.device)
         prev_output_new = prev_output*keep + prev_output_new*(1-keep)
-        print(prev_output_new)
+
         return prev_output_new
 
     def load_data(self, data_params):
