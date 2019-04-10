@@ -27,7 +27,7 @@ class UnsupervisedTrainer(Trainer):
         self.beam_search.to(self.device)
 
         if self.is_variational:
-            print("is variational")
+            self.logger.info("is variational")
             self.kl_cost = 0
             self.kl_cost_rate = 0.0001
 
