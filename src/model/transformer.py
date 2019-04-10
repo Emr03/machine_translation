@@ -4,13 +4,14 @@ from src.model.noise_model import *
 from src.data.load_embeddings import *
 from src.utils.config import params
 from torch.distributions.kl import kl_divergence
+import logging
 
 class Transformer(torch.nn.Module):
 
     def __init__(self, data_params, logger,
                  embd_file=None, init_emb=True,
                  is_shared_emb=True,
-                 is_variational=False,
+                 is_variational=True,
                  use_word_drop=True):
         """
         :param n_langs: number of supported languages
@@ -50,7 +51,7 @@ class Transformer(torch.nn.Module):
             self.n_langs=2
             self.vocab_size=[500, 500]
             self.id2lang = None
-            self.bos_index = 0
+            self.bos_index = [0, 5]
             self.eos_index = 1
             self.pad_index = 2
             self.blank_index = 4
@@ -172,12 +173,13 @@ class Transformer(torch.nn.Module):
 
         if self.is_variational:
             latent, kl_div = self.encode(input_seq, src_mask, src_lang)
+            prev_output = self.word_dropout(prev_output=prev_output, lang_id=tgt_lang)
+
             #print("kl div in forward", kl_div)
 
         else:
             latent = self.encode(input_seq, src_mask, src_lang)
 
-        # TODO: implement word-dropout
         dec_outputs = self.decode(prev_output=prev_output,
                                   latent_seq=latent,
                                   src_mask=src_mask,
@@ -199,15 +201,13 @@ class Transformer(torch.nn.Module):
 
         # define words to blank
         bos_index = self.bos_index[lang_id]
-        assert (prev_output[:, 0] == bos_index)
-
-        keep = np.random.rand(prev_output.size(0), prev_output.size(1) - 1) >= self.word_drop
+        keep = torch.rand(prev_output.size(0), prev_output.size(1)) >= self.word_drop
         keep[:, 0] = 1  # do not blank the start sentence symbol
+        keep = keep.type(torch.LongTensor)
 
         prev_output_new = torch.ones_like(prev_output)*self.blank_index
-        prev_output_new[:, 0] = self.bos_index
-        prev_output_new[:, 1:] = prev_output*keep
-
+        prev_output_new = prev_output*keep + prev_output_new*(1-keep)
+        print(prev_output_new)
         return prev_output_new
 
     def load_data(self, data_params):
@@ -334,13 +334,12 @@ if __name__ == "__main__":
     # loss = model.lm_loss(x, 1)
     # print(loss)
 
-    parser = get_parser()
-    data_params = parser.parse_args()
-    check_all_data_params(data_params)
-    model = Transformer(data_params=data_params, embd_file="corpora/mono/all.en-fr.60000.vec")
+    # Test word drop
+    # parser = get_parser()
+    # data_params = parser.parse_args()
+    # check_all_data_params(data_params)
+    model = Transformer(data_params=None, embd_file=None, logger=logging)
 
-    batch, l = model.get_batch(lang=0)
-    print("batch", batch)
-    print("l", l)
-    loss = model.lm_loss(src_batch=batch, lengths=l, lang=0)
-    print(loss)
+    out = model.forward(input_seq=x, prev_output=y, src_lang=0, tgt_lang=1, src_mask=src_m, tgt_mask=tgt_m)
+    print(out)
+
