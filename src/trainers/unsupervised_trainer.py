@@ -117,7 +117,7 @@ class UnsupervisedTrainer(Trainer):
                                         src_lang=tgt_lang)
 
         distance_penalty = self.distance_loss(src_z, tgt_z) * self.distance_cost
-        self.logger.info("distance penalty" % (distance_penalty.item()))
+        self.logger.info("distance penalty %40.2f" % (distance_penalty.item()))
 
         if add_noise:
             y, len = self.noise_model.add_noise(y.cpu(), len.cpu(), tgt_lang)
