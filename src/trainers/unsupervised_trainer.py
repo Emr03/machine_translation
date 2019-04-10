@@ -57,8 +57,8 @@ class UnsupervisedTrainer(Trainer):
                     #print("loss ", loss)
                     #kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
 
-                loss += self.kl_cost*kl_div
                 print("kl div", kl_div)
+                #loss += self.kl_cost*kl_div
                 return loss
 
                 #logging.info("kl_div %10.2f, kl_cost %10.5f" % (kl_div.item(), self.kl_cost))
