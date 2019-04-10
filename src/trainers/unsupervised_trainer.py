@@ -120,7 +120,7 @@ class UnsupervisedTrainer(Trainer):
 
         lang1 = 0
         lang2 = 1
-        logger.info("Training translation model for %s , %s " % (self.id2lang[lang1], self.id2lang[lang2]))
+        self.logger.info("Training translation model for %s , %s " % (self.id2lang[lang1], self.id2lang[lang2]))
 
         get_lm_iterators = [self.get_lm_iterator(lang_id=lang1, add_noise=True),
                             self.get_lm_iterator(lang_id=lang2, add_noise=True)]
@@ -232,7 +232,7 @@ class UnsupervisedTrainer(Trainer):
             idx = sent[:, i].item()
             input.append(self.data['dico'][self.id2lang[lang]][idx])
 
-        logger.info("sample sentence in lang %s: %s" % (self.id2lang[lang], ','.join(input)))
+        self.logger.info("sample sentence in lang %s: %s" % (self.id2lang[lang], ','.join(input)))
 
     def test(self, n_tests):
         self.transformer.eval()
