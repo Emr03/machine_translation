@@ -202,6 +202,7 @@ class Transformer(torch.nn.Module):
         # define words to blank
         bos_index = self.bos_index[lang_id]
         keep = torch.rand(prev_output.size(0), prev_output.size(1)) >= self.word_drop
+        keep = keep.to(prev_output.device)
         keep[:, 0] = 1  # do not blank the start sentence symbol
         keep = keep.type(torch.LongTensor)
 
