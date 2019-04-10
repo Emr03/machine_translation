@@ -8,10 +8,9 @@ import logging
 
 class Transformer(torch.nn.Module):
 
-    def __init__(self, data_params, logger,
+    def __init__(self, data_params, logger, is_variational,
                  embd_file=None, init_emb=True,
                  is_shared_emb=True,
-                 is_variational=True,
                  use_word_drop=True):
         """
         :param n_langs: number of supported languages

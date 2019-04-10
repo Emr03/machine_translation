@@ -19,13 +19,15 @@ class UnsupervisedTrainer(Trainer):
         self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
                                         n_best=1, encoding_lengths=512, max_length=175)
 
-        if self.parallel:
-            # self.device is the main device where stuff is aggregated
-            self.beam_search = torch.nn.DataParallel(self.beam_search)
+        # if self.parallel:
+        #     # self.device is the main device where stuff is aggregated
+        #     self.beam_search = torch.nn.DataParallel(self.beam_search)
 
+        # don't make beam search parallel, to avoid gather errors
         self.beam_search.to(self.device)
 
         if self.is_variational:
+            print("is variational")
             self.kl_cost = 0
             self.kl_cost_rate = 0.0001
 
