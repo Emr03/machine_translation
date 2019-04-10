@@ -134,7 +134,7 @@ class UnsupervisedTrainer(Trainer):
         new_batch_dict["src_mask"] = src_mask
         new_batch_dict["src_l"] = len
 
-        return new_batch_dict, distance
+        return new_batch_dict, distance_penalty
 
     def train(self, n_iter):
 
@@ -272,12 +272,14 @@ if __name__ == "__main__":
     check_all_data_params(data_params)
     exp_name = data_params.exp_name
     is_variational = data_params.variational > 0
+    use_distance_loss = data_params.use_distance_loss > 0
     logging.basicConfig(filename="logs/"+exp_name+".log", level=logging.DEBUG)
 
     model = Transformer(data_params=data_params, logger=logging,
                         init_emb=True,
                         embd_file="corpora/mono/all.en-fr.60000.vec",
-                        is_variational=is_variational)
+                        is_variational=is_variational,
+                        use_distance_loss=use_distance_loss)
 
     trainer = UnsupervisedTrainer(model, exp_name)
 

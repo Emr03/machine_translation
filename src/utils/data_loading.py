@@ -58,6 +58,7 @@ def get_parser():
                         help="Batch size")
 
     parser.add_argument("--variational", type=int, default=1)
+    parser.add_argument("--use_distance_loss", type=int, default=1)
 
     return parser
 
