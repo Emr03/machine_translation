@@ -202,9 +202,9 @@ class Transformer(torch.nn.Module):
         # define words to blank
         bos_index = self.bos_index[lang_id]
         keep = torch.rand(prev_output.size(0), prev_output.size(1)) >= self.word_drop
+        keep = keep.type(torch.LongTensor)
         keep = keep.to(prev_output.device)
         keep[:, 0] = 1  # do not blank the start sentence symbol
-        keep = keep.type(torch.LongTensor)
 
         prev_output_new = torch.ones_like(prev_output)*self.blank_index
         print(keep.device, prev_output_new.device)
