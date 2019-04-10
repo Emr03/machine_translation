@@ -165,7 +165,6 @@ class Transformer(torch.nn.Module):
         z = z + shift
         z = z.view(n_samples*z.size(1), -1, self.d_model)
         kl_div = torch.mean(kl_divergence(prior, posterior))
-        #print("kl_div in sample", kl_div)
 
         return z, kl_div
 

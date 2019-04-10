@@ -2,7 +2,7 @@ from src.data.dataset import *
 from src.data.loader import *
 from src.model.transformer import Transformer
 from src.utils.data_loading import get_parser
-#from src.utils.logger import create_logger
+from src.utils.logger import create_logger
 import logging
 from .basic_trainer import Trainer
 from src.model.beam_search_wrapper import MyBeamSearch
@@ -51,17 +51,9 @@ class UnsupervisedTrainer(Trainer):
 
                 loss = self.compute_kl_div_loss(x=output_seq, target=tgt_batch, lang=lang2)
 
-                #if self.parallel:
-                    #print("kl_div ", kl_div)
-                    #print("dec_out ", output_seq)
-                    #print("loss ", loss)
-                    #kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
-
-                logging.info("kl div" % (kl_div.data))
-                #loss += self.kl_cost*kl_div
-                return loss
-
-                #logging.info("kl_div %10.2f, kl_cost %10.5f" % (kl_div.item(), self.kl_cost))
+                kl_div = torch.mean(kl_div)
+                logging.info("kl_div %10.2f, kl_cost %10.5f" % (kl_div.item(), self.kl_cost))
+                loss += kl_div*self.kl_cost
 
             else:
 
