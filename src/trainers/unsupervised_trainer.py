@@ -278,10 +278,9 @@ if __name__ == "__main__":
     model = Transformer(data_params=data_params, logger=logging,
                         init_emb=True,
                         embd_file="corpora/mono/all.en-fr.60000.vec",
-                        is_variational=is_variational,
-                        use_distance_loss=use_distance_loss)
+                        is_variational=is_variational)
 
-    trainer = UnsupervisedTrainer(model, exp_name)
+    trainer = UnsupervisedTrainer(model, exp_name, use_distance_loss=use_distance_loss)
 
     trainer.train(50000)
     trainer.checkpoint(exp_name+".pth")
