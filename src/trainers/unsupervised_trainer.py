@@ -59,7 +59,9 @@ class UnsupervisedTrainer(Trainer):
 
                 loss += self.kl_cost*kl_div
                 print("kl div", kl_div)
-                logging.info("kl_div %10.2f, kl_cost %10.5f" % (kl_div.item(), self.kl_cost))
+                return loss
+
+                #logging.info("kl_div %10.2f, kl_cost %10.5f" % (kl_div.item(), self.kl_cost))
 
             else:
 
