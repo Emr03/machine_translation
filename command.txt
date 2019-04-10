@@ -8,7 +8,7 @@ Execute to train transformer on en-fr monolingual dataset
 python3 src.transformer.py --mono_dataset 'en:./corpora/mono/all.en.tok.60000.pth,,;fr:./corpora/mono/all.fr.tok.60000.pth,,' --n_mono -1 --langs 'en,fr' --para_dataset 'en-fr:,./corpora/para/dev/newstest2013-ref.XX.60000.pth,./corpora/para/dev/newstest2014-fren-src.XX.60000.pth' --batch_size 1
 
 Execute on GPUS
-srun --gres=gpu:2 -c 8 --mem=10G -p gpu python3 -m src.trainers.unsupervised_trainer --mono_dataset 'en:./corpora/mono/all.en.tok.60000.pth,,;fr:./corpora/mono/all.fr.tok.60000.pth,,' --n_mono -1 --langs 'en,fr' --para_dataset 'en-fr:,./corpora/para/dev/newstest2013-ref.XX.60000.pth,./corpora/para/dev/newstest2014-fren-src.XX.60000.pth' --batch_size 32 --word_shuffle 3 --word_dropout 0.1 --word_blank 0.2 --exp_name="variational_1" --variational=True
+srun --gres=gpu:3 -c 8 --mem=16G -p gpu python3 -m src.trainers.unsupervised_trainer --mono_dataset 'en:./corpora/mono/all.en.tok.60000.pth,,;fr:./corpora/mono/all.fr.tok.60000.pth,,' --n_mono -1 --langs 'en,fr' --para_dataset 'en-fr:,./corpora/para/dev/newstest2013-ref.XX.60000.pth,./corpora/para/dev/newstest2014-fren-src.XX.60000.pth' --batch_size 32 --word_shuffle 3 --word_dropout 0.1 --word_blank 0.2 --exp_name="baseline"
 
 
 Steven's commands:

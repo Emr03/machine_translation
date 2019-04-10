@@ -18,7 +18,6 @@ class Trainer(ABC):
         self.decode = transformer.decode
         self.logger = transformer.logger
         self.parallel = parallel
-        self.is_variational = self.transformer.is_variational
 
         if torch.cuda.is_available() and not parallel:
             self.device = torch.device('cuda')

@@ -15,6 +15,7 @@ class UnsupervisedTrainer(Trainer):
         super().__init__(transformer, parallel)
 
         self.exp_name = exp_name
+        self.is_variational = self.transformer.is_variational
 
         self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
                                         n_best=1, encoding_lengths=512, max_length=175)
@@ -253,7 +254,7 @@ if __name__ == "__main__":
     data_params = parser.parse_args()
     check_all_data_params(data_params)
     exp_name = data_params.exp_name
-    is_variational = data_params.variational
+    is_variational = data_params.variational > 0
     logging.basicConfig(filename="logs/"+exp_name+".log", level=logging.DEBUG)
 
     model = Transformer(data_params=data_params, logger=logging,

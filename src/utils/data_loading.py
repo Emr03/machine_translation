@@ -57,7 +57,7 @@ def get_parser():
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Batch size")
 
-    parser.add_argument("--variational", type=bool, default=True)
+    parser.add_argument("--variational", type=int, default=1)
 
     return parser
 
