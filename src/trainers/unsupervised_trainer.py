@@ -26,13 +26,13 @@ class UnsupervisedTrainer(Trainer):
 
         # don't make beam search parallel, to avoid gather errors
         self.beam_search.to(self.device)
+        self.distance_cost = 0
 
         if self.is_variational:
             self.logger.info("is variational")
             self.kl_cost = 0
             self.kl_cost_rate = 0.0001
-
-        self.distance_cost = 0.1 if self.use_distance_loss else 0
+            self.distance_cost = self.kl_cost_rate if self.use_distance_loss else 0
 
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
