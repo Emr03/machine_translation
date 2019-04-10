@@ -15,7 +15,6 @@ class UnsupervisedTrainer(Trainer):
         super().__init__(transformer, parallel)
 
         self.exp_name = exp_name
-        self.is_variational = self.transformer.is_variational
         self.use_distance_loss = use_distance_loss
 
         self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
