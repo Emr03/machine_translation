@@ -51,13 +51,7 @@ class NoiseModel():
 
         # be sure to shuffle entire words
         # get the bpe_end boolean indiators from indices in batch x
-        # print("self.bpe_end is ")
-        # print(self.bpe_end)
-        # print ("lang_id is " + str(lang_id))
-        # print("x is " + str(x))
         bpe_end = self.bpe_end[lang_id][x]
-        # print("bpe end is")
-        # print(bpe_end)
 
         # count the number of non-end of words,
         # the number in each cell indicates the word (order) index that this token belongs to

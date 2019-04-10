@@ -106,7 +106,9 @@ class UnsupervisedTrainer(Trainer):
                                         tgt_lang=tgt_lang)
 
         if add_noise:
-            y, len = self.noise_model.add_noise(y, len, tgt_lang)
+            y, len = self.noise_model.add_noise(y.cpu(), len.cpu(), tgt_lang)
+            y = y.to(self.device)
+            len = len.to(self.device)
 
         # only the source elements change
         src_mask = self.get_src_mask(y)
