@@ -108,7 +108,7 @@ class UnsupervisedTrainer(Trainer):
                                         src_lang=src_lang,
                                         tgt_lang=tgt_lang)
 
-        # TODO: we have to penalize the distance between the source's emb and the output's emb
+        # we have to penalize the distance between the source's emb and the output's emb
         src_z = self.transformer.encode(input_seq=x,
                                         src_mask=src_mask,
                                         src_lang=src_lang,
@@ -119,7 +119,8 @@ class UnsupervisedTrainer(Trainer):
                                         src_lang=tgt_lang,
                                         n_samples=0)
 
-        distance = self.distance_loss(src_z, tgt_z)
+        distance_penalty = self.distance_loss(src_z, tgt_z) * self.distance_cost
+        self.logger.info("distance penalty" % (distance_penalty.item()))
 
         if add_noise:
             y, len = self.noise_model.add_noise(y.cpu(), len.cpu(), tgt_lang)
