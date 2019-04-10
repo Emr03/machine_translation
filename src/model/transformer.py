@@ -127,6 +127,15 @@ class Transformer(torch.nn.Module):
 
         return self.linear_layers[tgt_lang](dec_output)
 
+    def get_emb(self, input_seq, src_mask, src_lang):
+
+        z = self.encoder(input_seq, src_mask=src_mask, lang_id=src_lang)
+
+        # compute mean along dim of len which is 1,
+        # note that this will keep track of the gradient
+        sent_emb = torch.mean(z, dim=1)
+        return sent_emb
+
     def sample_z(self, z, n_samples):
         """
         computes sentence embedding using the average of the sentences,
@@ -135,7 +144,7 @@ class Transformer(torch.nn.Module):
         :param n_samples:
         :return: latent variables of shape [n_samples, batch_size, len, d_model]
         """
-        # compute mean along dim of len which is 2, note that this will keep track of the gradient
+        # compute mean along dim of len which is 1, note that this will keep track of the gradient
         sent_emb = torch.mean(z, dim=1)
 
         # compute diagonal elements of sigma, returns vectors of dim d_model
