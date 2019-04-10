@@ -58,7 +58,7 @@ class UnsupervisedTrainer(Trainer):
                     #kl_div = torch.nn.parallel.gather(kl_div, target_device=self.device)
 
                 loss += self.kl_cost*kl_div
-                logging.info("kl_div %10.2f, kl_cost %10.5f, kl_loss" % (kl_div.item(), self.kl_cost))
+                logging.info("kl_div %10.2f, kl_cost %10.5f" % (kl_div.item(), self.kl_cost))
 
             else:
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     model = Transformer(data_params=data_params, logger=logging,
                         init_emb=True,
                         embd_file="corpora/mono/all.en-fr.60000.vec",
-                        is_variational=False)
+                        is_variational=is_variational)
 
     trainer = UnsupervisedTrainer(model, exp_name)
 
