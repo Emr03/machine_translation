@@ -10,12 +10,14 @@ import copy
 
 class UnsupervisedTrainer(Trainer):
 
-    def __init__(self, transformer, exp_name, use_distance_loss=True, parallel=True):
+    def __init__(self, transformer, exp_name, acc_steps=2,
+                 use_distance_loss=True, parallel=True):
 
         super().__init__(transformer, parallel)
 
         self.exp_name = exp_name
         self.use_distance_loss = use_distance_loss
+        self.acc_steps = acc_steps
 
         self.beam_search = MyBeamSearch(self.transformer, beam_size=1, logger=logging,
                                         n_best=1, encoding_lengths=512, max_length=175)
@@ -150,8 +152,6 @@ class UnsupervisedTrainer(Trainer):
 
         for i in range(n_iter):
 
-            self.opt.zero_grad()
-
             if self.is_variational:
                 self.kl_cost = min(1, i*self.kl_cost_rate)
 
@@ -202,7 +202,11 @@ class UnsupervisedTrainer(Trainer):
 
             try:
                 loss.backward()
-                self.opt_step()
+
+                # only update params and zero grads after we process a whole batch
+                if i % self.acc_steps == 0:
+                    self.opt_step()
+                    self.opt.zero_grad()
 
             except Exception as e:
                 logging.debug("Exception in training loop")
@@ -283,6 +287,6 @@ if __name__ == "__main__":
 
     trainer = UnsupervisedTrainer(model, exp_name, use_distance_loss=use_distance_loss)
 
-    trainer.train(50000)
+    trainer.train(2*50000)
     trainer.checkpoint(exp_name+".pth")
 
