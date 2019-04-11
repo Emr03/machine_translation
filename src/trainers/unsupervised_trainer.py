@@ -10,7 +10,7 @@ import copy
 
 class UnsupervisedTrainer(Trainer):
 
-    def __init__(self, transformer, exp_name, acc_steps=2,
+    def __init__(self, transformer, exp_name, acc_steps=1,
                  use_distance_loss=True, parallel=True):
 
         super().__init__(transformer, parallel)
