@@ -98,9 +98,8 @@ class UnsupervisedTrainer(Trainer):
         :return: new batch_dict, with replaced source elements
         """
 
-        # note that bos is missing
+        # note that bos is missing, works better that way (???)
         x = batch_dict["tgt_batch"]
-        x[:, 0] = self.bos_index[src_lang]
 
         src_mask = self.get_src_mask(x)
         y, len = self.generate_parallel(src_batch=x,
@@ -150,6 +149,7 @@ class UnsupervisedTrainer(Trainer):
         get_para_iterator = self.get_para_iterator(lang1=lang1, lang2=lang2, train=False, add_noise=False)
         para_iterator = get_para_iterator()
 
+        self.opt.zero_grad()
         for i in range(n_iter):
 
             if self.is_variational:
@@ -241,6 +241,9 @@ class UnsupervisedTrainer(Trainer):
 
         # For verification, what does an output sample look like?
         self.indices_to_words(output[0, :].unsqueeze_(0), tgt_lang)
+        self.logger.info("reference: ")
+        self.indices_to_words(src_batch[0, :].unsqueeze_(0), src_lang)
+
         return output, len
 
     def indices_to_words(self, sent, lang):
@@ -289,4 +292,3 @@ if __name__ == "__main__":
 
     trainer.train(2*50000)
     trainer.checkpoint(exp_name+".pth")
-
