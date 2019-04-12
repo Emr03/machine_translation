@@ -36,7 +36,7 @@ class UnsupervisedTrainer(Trainer):
             self.kl_cost_rate = 0.0001
 
         if load_from_checkpoint:
-            self.load_from_checkpoint(exp_name+".pth")
+            self.load_checkpoint(exp_name+".pth")
 
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
