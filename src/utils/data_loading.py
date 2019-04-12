@@ -59,6 +59,7 @@ def get_parser():
 
     parser.add_argument("--variational", type=int, default=1)
     parser.add_argument("--use_distance_loss", type=int, default=1)
+    parser.add_argument("--load_from_checkpoint", type=int, default=0)
 
     return parser
 

@@ -103,6 +103,7 @@ class Trainer(ABC):
             self.state = torch.load(filename, map_location=self.device)
             model_state_dict = self.state["state_dict"]
             opt_state_dict = self.state["optimizer"]
+            self.step = self.state["iter"]
 
             self.transformer.load_state_dict(state_dict=model_state_dict)
             self.opt.load_state_dict(state_dict=opt_state_dict)
@@ -272,7 +273,7 @@ class Trainer(ABC):
                        "tgt_mask": tgt_mask,
                        "src_l": src_l,
                        "tgt_l": tgt_l}
-        
+
         return iterator
 
     def get_para_iterator(self, lang1, lang2, train=True, add_noise=False):

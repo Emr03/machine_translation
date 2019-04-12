@@ -11,7 +11,7 @@ import copy
 class UnsupervisedTrainer(Trainer):
 
     def __init__(self, transformer, exp_name, acc_steps=1,
-                 use_distance_loss=True, parallel=True):
+                 use_distance_loss=True, parallel=True, load_from_checkpoint):
 
         super().__init__(transformer, parallel)
 
@@ -34,6 +34,9 @@ class UnsupervisedTrainer(Trainer):
             self.logger.info("is variational")
             self.kl_cost = 0
             self.kl_cost_rate = 0.0001
+
+        if load_from_checkpoint:
+            self.load_from_checkpoint(exp_name+".pth")
 
     def reconstruction_loss(self, batch_dict, lang1, lang2):
 
@@ -153,7 +156,7 @@ class UnsupervisedTrainer(Trainer):
         for i in range(n_iter):
 
             if self.is_variational:
-                self.kl_cost = min(1, i*self.kl_cost_rate)
+                self.kl_cost = min(1, self.step*self.kl_cost_rate)
 
             if self.use_distance_loss:
                 self.distance_cost = self.kl_cost
@@ -281,6 +284,8 @@ if __name__ == "__main__":
     exp_name = data_params.exp_name
     is_variational = data_params.variational > 0
     use_distance_loss = data_params.use_distance_loss > 0
+    load_from_checkpoint = data_params.load_from_checkpoint > 0
+
     logging.basicConfig(filename="logs/"+exp_name+".log", level=logging.DEBUG)
 
     model = Transformer(data_params=data_params, logger=logging,
@@ -288,7 +293,9 @@ if __name__ == "__main__":
                         embd_file="corpora/mono/all.en-fr.60000.vec",
                         is_variational=is_variational)
 
-    trainer = UnsupervisedTrainer(model, exp_name, use_distance_loss=use_distance_loss)
+    trainer = UnsupervisedTrainer(model, exp_name,
+                                 use_distance_loss=use_distance_loss,
+                                 load_from_checkpoint=load_from_checkpoint)
 
     trainer.train(2*50000)
     trainer.checkpoint(exp_name+".pth")
