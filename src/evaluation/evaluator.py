@@ -41,12 +41,12 @@ class EvaluatorMT(object):
         """
         Initialize evaluator.
         """
-        self.encoder = transformer.encoder
-        self.decoder = transformer.decoder
-        self.decode = transformer.decode
+        self.encoder = transformer.module.encoder
+        self.decoder = transformer.module.decoder
+        self.decode = transformer.module.decode
 
-        self.data = transformer.data
-        self.dico = transformer.data['dico']
+        self.data = transformer.module.data
+        self.dico = transformer.module.data['dico']
         self.params = params
         self.exp_name = exp_name
 
@@ -317,7 +317,7 @@ if __name__ == "__main__":
 
     model.load_state_dict(state_dict=model_state_dict)
 
-    eval = EvaluatorMT(transformer=model.module, params=data_params, exp_name=exp_name)
+    eval = EvaluatorMT(transformer=model, params=data_params, exp_name=exp_name)
 
     scores = OrderedDict({'epoch': 1})
     eval.eval_para(lang1='en', lang2='fr', data_type='test', scores=scores)
