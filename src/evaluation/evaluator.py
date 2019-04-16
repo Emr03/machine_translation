@@ -350,7 +350,7 @@ if __name__ == "__main__":
 
     model.load_state_dict(state_dict=model_state_dict)
 
-    eval = EvaluatorMT(transformer=model, params=data_params)
+    eval = EvaluatorMT(transformer=model.module, params=data_params)
 
     eval.eval_para(lang1='en', lang2='fr', data_type='test')
     eval.eval_para(lang1='en', lang2='fr', data_type='valid')
