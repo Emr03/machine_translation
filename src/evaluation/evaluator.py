@@ -37,7 +37,7 @@ def restore_segmentation(path):
 
 class EvaluatorMT(object):
 
-    def __init__(self, transformer, params, exp_name):
+    def __init__(self, transformer, params, exp_name, device):
         """
         Initialize evaluator.
         """
@@ -49,6 +49,7 @@ class EvaluatorMT(object):
         self.dico = transformer.module.data['dico']
         self.params = params
         self.exp_name = exp_name
+        self.device = device
 
         # create reference files for BLEU evaluation
         self.create_reference_files()
@@ -317,7 +318,7 @@ if __name__ == "__main__":
 
     model.load_state_dict(state_dict=model_state_dict)
 
-    eval = EvaluatorMT(transformer=model, params=data_params, exp_name=exp_name)
+    eval = EvaluatorMT(transformer=model, params=data_params, exp_name=exp_name, device=device)
 
     scores = OrderedDict({'epoch': 1})
     eval.eval_para(lang1='en', lang2='fr', data_type='test', scores=scores)
