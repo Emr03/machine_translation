@@ -18,6 +18,8 @@ from src.utils.data_loading import get_parser
 from src.utils.logger import create_logger
 from src.trainers.unsupervised_trainer import UnsupervisedTrainer
 import logging
+from src.model.beam_search_wrapper import MyBeamSearch
+
 
 logger = getLogger()
 
@@ -50,6 +52,11 @@ class EvaluatorMT(object):
 
         # create reference files for BLEU evaluation
         self.create_reference_files()
+
+        self.beam_search = MyBeamSearch(transformer, beam_size=3, logger=logging,
+                                        n_best=1, encoding_lengths=512, max_length=175)
+
+        self.beam_search.to(self.device)
 
     def get_pair_for_mono(self, lang):
         """
@@ -92,6 +99,18 @@ class EvaluatorMT(object):
         assert(eos_indices.shape[0] == n_sent)
         eos_indices = eos_indices[:, 1].unsqueeze_() + 1
         return eos_indices
+
+    def generate_parallel(self, src_batch, src_mask, src_lang, tgt_lang):
+        """
+        generate sentences for back-translation using greedy decoding
+        :param batch_dict: dict of src batch and src mask
+        :param src_lang:
+        :param tgt_lang:
+        :return:
+        """
+        output, len = self.beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
+
+        return output, len
 
     def mono_iterator(self, data_type, lang):
         """
@@ -196,13 +215,7 @@ class EvaluatorMT(object):
             tgt_mask = self.get_tgt_mask(sent2.cpu()).cuda()
 
             # encode / decode / generatef
-            encoded = self.encoder(sent1, src_mask=src_mask, lang_id=lang1_id)
-            sent2_ = self.decode(latent_seq=encoded, prev_output=sent2[:-1],
-                                   src_mask= src_mask, tgt_mask=tgt_mask, tgt_lang=lang2_id)
-
-            # compute sentence length
-            len2_ = self.compute_sent_len(sent2_)
-            len2_.cuda()
+            sent2_ , len2_= self.generate_parallel(src_batch=sent1, src_mask=src_mask, src_lang=lang1_id, tgt_lang=lang2_id)
 
             # cross-entropy loss
             #xe_loss += loss_fn2(decoded.view(-1, n_words2), sent2[1:].view(-1)).item()
@@ -287,7 +300,6 @@ if __name__ == "__main__":
                         embd_file="corpora/mono/all.en-fr.60000.vec",
                         is_variational=is_variational)
 
-    # load from checkpoint
     if torch.cuda.is_available():
         print("Using cuda")
         device = torch.device("cuda:0")
