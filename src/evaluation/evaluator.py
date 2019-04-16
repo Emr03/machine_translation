@@ -111,7 +111,7 @@ class EvaluatorMT(object):
         """
         output, len = self.beam_search(src_batch, src_mask, src_lang=src_lang, tgt_lang=tgt_lang)
 
-        return output, len
+        return output.transpose_(0, 1), len
 
     def mono_iterator(self, data_type, lang):
         """
@@ -271,7 +271,7 @@ def convert_to_text(batch, lengths, dico, lang_id, params):
     slen, bs = batch.shape
     assert lengths.max() == slen and lengths.shape[0] == bs
     assert (batch[0] == bos_index).sum() == bs
-    assert (batch == params.eos_index).sum() == bs
+    # assert (batch == params.eos_index).sum() == bs
     sentences = []
 
     for j in range(bs):
