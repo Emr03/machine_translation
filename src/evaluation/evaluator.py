@@ -341,6 +341,7 @@ if __name__ == "__main__":
         model.to(device)
 
     else:
+        print("Not using cuda")
         device = torch.device('cpu')
 
     filename = exp_name+".pth"
