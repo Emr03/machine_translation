@@ -98,7 +98,7 @@ class EvaluatorMT(object):
         n_sent = sentences.shape[0]
         eos_indices = (sentences == self.eos_index).nonzero()
         assert(eos_indices.shape[0] == n_sent)
-        eos_indices = eos_indices[:, 1].unsqueeze_() + 1
+        eos_indices = eos_indices[:, 1].unsqueeze_() + 2
         return eos_indices
 
     def generate_parallel(self, src_batch, src_mask, src_lang, tgt_lang):
