@@ -40,7 +40,9 @@ class EvaluatorMT(object):
         Initialize evaluator.
         """
         self.encoder = transformer.encoder
-        self.decoder = transformer.decode
+        self.decoder = transformer.decoder
+        self.decode = transformer.decode
+
         self.data = transformer.data
         self.dico = transformer.data['dico']
         self.params = params
@@ -180,8 +182,6 @@ class EvaluatorMT(object):
         # hypothesis
         txt = []
 
-        # for perplexity
-        #loss_fn2 = nn.CrossEntropyLoss(weight=self.decoder.loss_fn[lang2_id].weight, size_average=False)
         n_words2 = self.params.n_words[lang2_id]
         count = 0
         xe_loss = 0
@@ -197,7 +197,7 @@ class EvaluatorMT(object):
 
             # encode / decode / generatef
             encoded = self.encoder(sent1, src_mask=src_mask, lang_id=lang1_id)
-            sent2_ = self.decoder(latent_seq=encoded, prev_output=sent2[:-1],
+            sent2_ = self.decode(latent_seq=encoded, prev_output=sent2[:-1],
                                    tgt_mask=tgt_mask, tgt_lang=lang2_id)
 
             # compute sentence length
@@ -228,93 +228,6 @@ class EvaluatorMT(object):
         # update scores
         scores['ppl_%s_%s_%s' % (lang1, lang2, data_type)] = np.exp(xe_loss / count)
         scores['bleu_%s_%s_%s' % (lang1, lang2, data_type)] = bleu
-
-    def eval_back(self, lang1, lang2, lang3, data_type, scores):
-        """
-        Compute lang1 -> lang2 -> lang3 perplexity and BLEU scores.
-        """
-        logger.info("Evaluating %s -> %s -> %s (%s) ..." % (lang1, lang2, lang3, data_type))
-        assert data_type in ['valid', 'test']
-        self.encoder.eval()
-        self.decoder.eval()
-        params = self.params
-        lang1_id = params.lang2id[lang1]
-        lang2_id = params.lang2id[lang2]
-        lang3_id = params.lang2id[lang3]
-
-        # hypothesis
-        txt = []
-
-        # for perplexity
-        #loss_fn3 = nn.CrossEntropyLoss(weight=self.decoder.loss_fn[lang3_id].weight, size_average=False)
-        n_words3 = self.params.n_words[lang3_id]
-        count = 0
-        xe_loss = 0
-
-        for batch in self.get_iterator(data_type, lang1, lang3):
-
-            # batch
-            (sent1, len1), (sent3, len3) = batch
-            sent1, sent3 = sent1.cuda(), sent3.cuda()
-
-            # encode / generate lang1 -> lang2
-            encoded = self.encoder(sent1, len1, lang1_id)
-            sent2_, len2_, _ = self.decoder.generate(encoded, lang2_id)
-
-            # encode / decode / generate lang2 -> lang3
-            encoded = self.encoder(sent2_.cuda(), len2_, lang2_id)
-            decoded = self.decoder(encoded, sent3[:-1], lang3_id)
-            sent3_, len3_, _ = self.decoder.generate(encoded, lang3_id)
-
-            # cross-entropy loss
-            #xe_loss += loss_fn3(decoded.view(-1, n_words3), sent3[1:].view(-1)).item()
-            count += (len3 - 1).sum().item()  # skip BOS word
-
-            # convert to text
-            txt.extend(convert_to_text(sent3_, len3_, self.dico[lang3], lang3_id, self.params))
-
-        # hypothesis / reference paths
-        hyp_name = 'hyp{0}.{1}-{2}-{3}.{4}.txt'.format(scores['epoch'], lang1, lang2, lang3, data_type)
-        hyp_path = os.path.join(self.exp_name, hyp_name)
-        if lang1 == lang3:
-            _lang1, _lang3 = self.get_pair_for_mono(lang1)
-            if lang3 != _lang3:
-                _lang1, _lang3 = _lang3, _lang1
-            ref_path = params.ref_paths[(_lang1, _lang3, data_type)]
-        else:
-            ref_path = params.ref_paths[(lang1, lang3, data_type)]
-
-        # export sentences to hypothesis file / restore BPE segmentation
-        with open(hyp_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(txt) + '\n')
-        restore_segmentation(hyp_path)
-
-        # evaluate BLEU score
-        bleu = eval_moses_bleu(ref_path, hyp_path)
-        logger.info("BLEU %s %s : %f" % (hyp_path, ref_path, bleu))
-
-        # update scores
-        scores['ppl_%s_%s_%s_%s' % (lang1, lang2, lang3, data_type)] = np.exp(xe_loss / count)
-        scores['bleu_%s_%s_%s_%s' % (lang1, lang2, lang3, data_type)] = bleu
-
-    def run_all_evals(self, epoch):
-        """
-        Run all evaluations.
-        """
-        scores = OrderedDict({'epoch': epoch})
-
-        with torch.no_grad():
-
-            for lang1, lang2 in self.data['para'].keys():
-                for data_type in ['valid', 'test']:
-                    self.eval_para(lang1, lang2, data_type, scores)
-                    self.eval_para(lang2, lang1, data_type, scores)
-
-            for lang1, lang2, lang3 in self.params.pivo_directions:
-                for data_type in ['valid', 'test']:
-                    self.eval_back(lang1, lang2, lang3, data_type, scores)
-
-        return scores
 
 
 def eval_moses_bleu(ref, hyp):
