@@ -147,7 +147,7 @@ class EvaluatorMT(object):
         txt = []
 
         # for perplexity
-        loss_fn2 = nn.CrossEntropyLoss(weight=self.decoder.loss_fn[lang2_id].weight, size_average=False)
+        #loss_fn2 = nn.CrossEntropyLoss(weight=self.decoder.loss_fn[lang2_id].weight, size_average=False)
         n_words2 = self.params.n_words[lang2_id]
         count = 0
         xe_loss = 0
@@ -164,7 +164,7 @@ class EvaluatorMT(object):
             sent2_, len2_, _ = self.decoder.generate(encoded, lang2_id)
 
             # cross-entropy loss
-            xe_loss += loss_fn2(decoded.view(-1, n_words2), sent2[1:].view(-1)).item()
+            #xe_loss += loss_fn2(decoded.view(-1, n_words2), sent2[1:].view(-1)).item()
             count += (len2 - 1).sum().item()  # skip BOS word
 
             # convert to text
@@ -205,7 +205,7 @@ class EvaluatorMT(object):
         txt = []
 
         # for perplexity
-        loss_fn3 = nn.CrossEntropyLoss(weight=self.decoder.loss_fn[lang3_id].weight, size_average=False)
+        #loss_fn3 = nn.CrossEntropyLoss(weight=self.decoder.loss_fn[lang3_id].weight, size_average=False)
         n_words3 = self.params.n_words[lang3_id]
         count = 0
         xe_loss = 0
@@ -226,7 +226,7 @@ class EvaluatorMT(object):
             sent3_, len3_, _ = self.decoder.generate(encoded, lang3_id)
 
             # cross-entropy loss
-            xe_loss += loss_fn3(decoded.view(-1, n_words3), sent3[1:].view(-1)).item()
+            #xe_loss += loss_fn3(decoded.view(-1, n_words3), sent3[1:].view(-1)).item()
             count += (len3 - 1).sum().item()  # skip BOS word
 
             # convert to text
