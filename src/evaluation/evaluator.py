@@ -35,7 +35,7 @@ def restore_segmentation(path):
 
 class EvaluatorMT(object):
 
-    def __init__(self, transformer, params):
+    def __init__(self, transformer, params, exp_name):
         """
         Initialize evaluator.
         """
@@ -44,6 +44,7 @@ class EvaluatorMT(object):
         self.data = transformer.data
         self.dico = transformer.data['dico']
         self.params = params
+        self.exp_name = exp_name
 
         # create reference files for BLEU evaluation
         self.create_reference_files()
@@ -101,8 +102,8 @@ class EvaluatorMT(object):
 
             for data_type in ['valid', 'test']:
 
-                lang1_path = os.path.join(params.dump_path, 'ref.{0}-{1}.{2}.txt'.format(lang2, lang1, data_type))
-                lang2_path = os.path.join(params.dump_path, 'ref.{0}-{1}.{2}.txt'.format(lang1, lang2, data_type))
+                lang1_path = os.path.join(self.exp_name, 'ref.{0}-{1}.{2}.txt'.format(lang2, lang1, data_type))
+                lang2_path = os.path.join(self.exp_name, 'ref.{0}-{1}.{2}.txt'.format(lang1, lang2, data_type))
 
                 lang1_txt = []
                 lang2_txt = []
@@ -171,7 +172,7 @@ class EvaluatorMT(object):
 
         # hypothesis / reference paths
         hyp_name = 'hyp{0}.{1}-{2}.{3}.txt'.format(scores['epoch'], lang1, lang2, data_type)
-        hyp_path = os.path.join(params.dump_path, hyp_name)
+        hyp_path = os.path.join(self.exp_name, hyp_name)
         ref_path = params.ref_paths[(lang1, lang2, data_type)]
 
         # export sentences to hypothesis file / restore BPE segmentation
@@ -233,7 +234,7 @@ class EvaluatorMT(object):
 
         # hypothesis / reference paths
         hyp_name = 'hyp{0}.{1}-{2}-{3}.{4}.txt'.format(scores['epoch'], lang1, lang2, lang3, data_type)
-        hyp_path = os.path.join(params.dump_path, hyp_name)
+        hyp_path = os.path.join(self.exp_name, hyp_name)
         if lang1 == lang3:
             _lang1, _lang3 = self.get_pair_for_mono(lang1)
             if lang3 != _lang3:
@@ -350,7 +351,7 @@ if __name__ == "__main__":
 
     model.load_state_dict(state_dict=model_state_dict)
 
-    eval = EvaluatorMT(transformer=model.module, params=data_params)
+    eval = EvaluatorMT(transformer=model.module, params=data_params, exp_name=exp_name)
 
     eval.eval_para(lang1='en', lang2='fr', data_type='test')
     eval.eval_para(lang1='en', lang2='fr', data_type='valid')
