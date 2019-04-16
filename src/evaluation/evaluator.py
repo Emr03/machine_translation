@@ -60,7 +60,7 @@ class EvaluatorMT(object):
     def get_src_mask(self, src_batch):
 
         mask = torch.ones_like(src_batch)
-        mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
+        mask.masked_fill_(src_batch == self.params.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
         #print("mask", mask)
         return mask
 
@@ -75,7 +75,7 @@ class EvaluatorMT(object):
         tgt_m = torch.from_numpy(tgt_m)
 
         # hide padding
-        tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.pad_index, 0).unsqueeze_(1)
+        tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.params.pad_index, 0).unsqueeze_(1)
         #print("tgt_m", tgt_m)
         return tgt_m
 
