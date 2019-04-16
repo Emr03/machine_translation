@@ -196,7 +196,7 @@ class EvaluatorMT(object):
             tgt_mask = self.get_tgt_mask(sent2.cpu()).cuda()
 
             # encode / decode / generatef
-            encoded = self.encoder(sent1, src_mask=src_mask, src_lang=lang1_id)
+            encoded = self.encoder(sent1, src_mask=src_mask, lang_id=lang1_id)
             sent2_ = self.decoder(latent_seq=encoded, prev_output=sent2[:-1],
                                    tgt_mask=tgt_mask, tgt_lang=lang2_id)
 
