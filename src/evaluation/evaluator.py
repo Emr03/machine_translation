@@ -353,5 +353,6 @@ if __name__ == "__main__":
 
     eval = EvaluatorMT(transformer=model.module, params=data_params, exp_name=exp_name)
 
+    eval.create_reference_files()
     eval.eval_para(lang1='en', lang2='fr', data_type='test')
     eval.eval_para(lang1='en', lang2='fr', data_type='valid')
