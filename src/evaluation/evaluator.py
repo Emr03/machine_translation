@@ -192,8 +192,8 @@ class EvaluatorMT(object):
             (sent1, len1), (sent2, len2) = batch
             sent1, sent2 = sent1.transpose_(0, 1).cuda(), sent2.transpose_(0, 1).cuda()
 
-            src_mask = self.get_src_mask(sent1).cuda()
-            tgt_mask = self.get_tgt_mask(sent2).cuda()
+            src_mask = self.get_src_mask(sent1.cpu()).cuda()
+            tgt_mask = self.get_tgt_mask(sent2.cpu()).cuda()
 
             # encode / decode / generatef
             encoded = self.encoder(sent1, src_mask=src_mask, src_lang=lang1_id)
