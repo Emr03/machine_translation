@@ -198,7 +198,7 @@ class EvaluatorMT(object):
             # encode / decode / generatef
             encoded = self.encoder(sent1, src_mask=src_mask, lang_id=lang1_id)
             sent2_ = self.decode(latent_seq=encoded, prev_output=sent2[:-1],
-                                   tgt_mask=tgt_mask, tgt_lang=lang2_id)
+                                   src_mask= src_mask, tgt_mask=tgt_mask, tgt_lang=lang2_id)
 
             # compute sentence length
             len2_ = self.compute_sent_len(sent2_)
