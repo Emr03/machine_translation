@@ -22,7 +22,7 @@ import logging
 logger = getLogger()
 
 TOOLS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools')
-BLEU_SCRIPT_PATH = os.path.join(TOOLS_PATH, 'src/evaluation/multi-bleu.perl')
+BLEU_SCRIPT_PATH = 'src/evaluation/multi-bleu.perl'
 assert os.path.isfile(BLEU_SCRIPT_PATH), "Moses not found. Please be sure you downloaded Moses in %s" % TOOLS_PATH
 
 def restore_segmentation(path):
