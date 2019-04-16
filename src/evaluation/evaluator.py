@@ -334,8 +334,11 @@ if __name__ == "__main__":
 
     # load from checkpoint
     if torch.cuda.is_available():
-        device = torch.device('cuda')
-        model.cuda()
+        device = torch.device("cuda:0")
+        transformer = nn.DataParallel(model)
+        # self.logger.debug("transformer ", self.transformer)
+        model.to(device)
+
     else:
         device = torch.device('cpu')
 
