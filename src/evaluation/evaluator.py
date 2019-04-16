@@ -57,6 +57,40 @@ class EvaluatorMT(object):
         assert len(candidates) > 0
         return sorted(candidates)[0]
 
+    def get_src_mask(self, src_batch):
+
+        mask = torch.ones_like(src_batch)
+        mask.masked_fill_(src_batch == self.pad_index, 0).unsqueeze_(-2).unsqueeze_(-2)
+        #print("mask", mask)
+        return mask
+
+    def get_tgt_mask(self, tgt_batch):
+
+        batch_size, sent_len = tgt_batch.shape
+
+        # hide future words
+        tgt_m = np.tril(np.ones((batch_size, sent_len, sent_len)), k=0).astype(np.uint8)
+        #print("tgt_m", tgt_m)
+
+        tgt_m = torch.from_numpy(tgt_m)
+
+        # hide padding
+        tgt_m.masked_fill_(tgt_batch.unsqueeze(-1) == self.pad_index, 0).unsqueeze_(1)
+        #print("tgt_m", tgt_m)
+        return tgt_m
+
+    def compute_sent_len(self, sentences):
+        """
+        returns a tensor containing the length of each sentence in the batch
+        :param sentences: batch_size, max_len
+        :return:
+        """
+        n_sent = sentences.shape[0]
+        eos_indices = (sentences == self.eos_index).nonzero()
+        assert(eos_indices.shape[0] == n_sent)
+        eos_indices = eos_indices[:, 1].unsqueeze_() + 1
+        return eos_indices
+
     def mono_iterator(self, data_type, lang):
         """
         If we do not have monolingual validation / test sets, we take one from parallel data.
@@ -156,12 +190,19 @@ class EvaluatorMT(object):
 
             # batch
             (sent1, len1), (sent2, len2) = batch
-            sent1, sent2 = sent1.cuda(), sent2.cuda()
+            sent1, sent2 = sent1.transpose_(0, 1).cuda(), sent2.transpose_(0, 1).cuda()
 
-            # encode / decode / generate
-            encoded = self.encoder(sent1, len1, lang1_id)
-            decoded = self.decoder(encoded, sent2[:-1], lang2_id)
-            sent2_, len2_, _ = self.decoder.generate(encoded, lang2_id)
+            src_mask = self.get_src_mask(sent1)
+            tgt_mask = self.get_tgt_mask(sent2)
+
+            # encode / decode / generatef
+            encoded = self.encoder(sent1, src_mask=src_mask, src_lang=lang1_id)
+            sent2_ = self.decoder(latent_seq=encoded, prev_output=sent2[:-1],
+                                   tgt_mask=tgt_mask, tgt_lang=lang2_id)
+
+            # compute sentence length
+            len2_ = self.compute_sent_len(sent2_)
+            len2_.cuda()
 
             # cross-entropy loss
             #xe_loss += loss_fn2(decoded.view(-1, n_words2), sent2[1:].view(-1)).item()
